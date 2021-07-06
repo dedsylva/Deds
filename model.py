@@ -96,20 +96,26 @@ class Model():
 		model.append([weights, bias, activation])
 		return model
 
-	def Train(self, model, x, y, loss, opt, epochs, batch, categoric, lr=0.04,
-			  momentum=True, gamma=0.95):
-		
+	def Compile(self, optimizer, loss, metrics, lr= 0.001, momentum=True, gamma=0.95):
+		self.optimizer = optimizer
+		self.loss = loss
+		self.lr = lr
+
 		#optimizer with momentum
 		if not momentum:
-			m = False
-			gamma = 0
+			self.momentum = False
+			self.gamma = 0
 		else:
-			m = True
-			g=0.95
+			self.momentum = True
+			self.gamma = gamma
 
+
+	def Train(self, model, x, y, epochs, batch, categoric):
 		l = []
 		ac = []
-		
+		loss_ = getattr(losses, self.loss)
+		opt_ = getattr(optimizers, self.optimizer)
+
 		#print summary
 		self.summary(model)
 
@@ -133,7 +139,6 @@ class Model():
 
 				#backward pass
 				#loss
-				loss_ = getattr(losses, loss)
 				avg_loss += (loss_(A[-1][2], y[k])).mean()
 				
 				if categoric:
@@ -148,20 +153,23 @@ class Model():
 				all_loss = list()
 				for j in range(len(model)):
 					if j == 0:
-						all_loss.append(self.backward(A[-1-j], model[-1-j][2], y[k], loss, True, model[-j], [0,0,0]))
+						all_loss.append(self.backward(A[-1-j], model[-1-j][2], y[k], self.loss, True, model[-j], [0,0,0]))
 					else:
-						all_loss.append(self.backward(A[-1-j], model[-1-j][2], y[k], loss, False, model[-j], all_loss[-1]))
+						all_loss.append(self.backward(A[-1-j], model[-1-j][2], y[k], self.loss, False, model[-j], all_loss[-1]))
 
-				if momentum:
+				if self.momentum:
 					if count == 1:
-						momentum_ = [[lr*all_loss[j][1], lr*all_loss[j][2]] for j in range(len(model))]
+						momentum_ = [[self.lr*all_loss[j][1], self.lr*all_loss[j][2]] for j in range(len(model))]
 					else:
-						momentum_ = [[gamma*momentum_[j][0] + lr*all_loss[j][1],
-								    	gamma*momentum_[j][1] + lr*all_loss[j][2]] for j in range(len(model))]
+						momentum_ = [[self.gamma*momentum_[j][0] + self.lr*all_loss[j][1],
+								    	self.gamma*momentum_[j][1] + self.lr*all_loss[j][2]] for j in range(len(model))]
 
-				#update params
-				opt_ = getattr(optimizers, opt)
-				model = opt_(model, momentum_) 
+					#update params
+					model = opt_(model, momentum_, self.momentum) 
+				else:
+					#update params
+					model = opt_(model, all_loss, self.momentum) 
+
 			acc /= count
 			avg_loss /= count
 

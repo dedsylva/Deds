@@ -23,9 +23,12 @@ def main(argv):
 			model = NN.Dense(128, 70, model, activation='ReLu')
 			model = NN.Output(70, 10, model, activation='Softmax')
 
+			#compile model
+			NN.Compile(optimizer='SGD', loss='MSE', metrics='accuracy', lr=lr, gamma=gamma)
+			
 			#train the model
 			model, loss, accuracy = NN.Train(model, X_train, Y_train, 
-				loss='MSE', opt='SGD', epochs=epochs, batch=BS, categoric=True, lr=lr, gamma=gamma)
+				epochs=epochs, batch=BS, categoric=True)
 
 			#evaluate the network
 			precision = NN.Evaluate(model, X_test, Y_test, True)
