@@ -96,18 +96,34 @@ class Model():
 		model.append([weights, bias, activation])
 		return model
 
-	def Compile(self, optimizer, loss, metrics, lr= 0.001, momentum=True, gamma=0.95):
+	def Compile(self, optimizer, loss, metrics, lr= 0.001, momentum=True, 
+				gamma=0.95,	l1=False, lambd_l1=0.00001, l2=False, lambd_l2=0.00001,):
 		self.optimizer = optimizer
 		self.loss = loss
 		self.lr = lr
 
 		#optimizer with momentum
-		if not momentum:
-			self.momentum = False
-			self.gamma = 0
-		else:
+		if momentum:
 			self.momentum = True
 			self.gamma = gamma
+		else:
+			self.momentum = False
+			self.gamma = 0
+
+		if l1:
+			self.l1 = True
+			self.lambd_l1 = lambd_l1
+		else:
+			self.l1 = False
+			self.lambd_l1 = 0
+
+		if l2:
+			self.l2 = True
+			self.lambd_l2 = lambd_l2
+		else:
+			self.l2 = False
+			self.lambd_l2 = 0
+
 
 
 	def Train(self, model, x, y, epochs, batch, categoric):
@@ -138,8 +154,22 @@ class Model():
 						A.append(self.forward(model[j], A[-1][2]))
 
 				#backward pass
+				all_loss = list()
+				for j in range(len(model)):
+					if j == 0:
+						all_loss.append(self.backward(A[-1-j], model[-1-j][2], y[k], self.loss, True, model[-j], [0,0,0]))
+					else:
+						all_loss.append(self.backward(A[-1-j], model[-1-j][2], y[k], self.loss, False, model[-j], all_loss[-1]))
+
+				reg = 0
+				#weight regularization
+				if self.l1:				
+					reg += np.mean([abs(all_loss[i][1]).mean() for i in range(len(model))])*lambd
+				if self.l2:
+					reg += np.mean([(all_loss[i][1]**2).mean() for i in range(len(model))])*lambd
+				
 				#loss
-				avg_loss += (loss_(A[-1][2], y[k])).mean()
+				avg_loss += (loss_(A[-1][2], y[k])).mean() + reg
 				
 				if categoric:
 					if (np.argmax(A[-1][2]) == np.argmax(y[k])):
@@ -149,14 +179,6 @@ class Model():
 					if (int(A[-1][2][0]) == int(y[k])):
 						acc += 1
 
-
-				all_loss = list()
-				for j in range(len(model)):
-					if j == 0:
-						all_loss.append(self.backward(A[-1-j], model[-1-j][2], y[k], self.loss, True, model[-j], [0,0,0]))
-					else:
-						all_loss.append(self.backward(A[-1-j], model[-1-j][2], y[k], self.loss, False, model[-j], all_loss[-1]))
-
 				if self.momentum:
 					if count == 1:
 						momentum_ = [[self.lr*all_loss[j][1], self.lr*all_loss[j][2]] for j in range(len(model))]
@@ -165,7 +187,8 @@ class Model():
 								    	self.gamma*momentum_[j][1] + self.lr*all_loss[j][2]] for j in range(len(model))]
 
 					#update params
-					model = opt_(model, momentum_, self.momentum) 
+					model = opt_(model, momentum_, self.momentum, l1=self.l1,
+								 lambd_l1=self.lambd_l1, l2=self.l2, lambd_l2=self.lambd_l2) 
 				else:
 					#update params
 					model = opt_(model, all_loss, self.momentum) 

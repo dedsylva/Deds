@@ -12,7 +12,7 @@ def main(argv):
 		if data[0][1] == 'MNIST':
 			db = MNIST()
 			X_train, X_test, Y_train, Y_test = db.get_data()
-			epochs = 60
+			epochs = 80
 			BS = 128
 			lr = 0.001
 			gamma = 0.95

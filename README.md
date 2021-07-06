@@ -26,9 +26,12 @@ model = NN.Input(15, input_shape=X_train.shape[1], activation='ReLu')
 model = NN.Dense(15, 10, model, activation='ReLu')
 model = NN.Output(10, 1, model, activation='Linear')
 
-#train the model categoric labels for now needs to be explicit
-loss, accuracy = NN.Train(model, X_train, Y_train, 
-	loss='MSE', opt='SGD', epochs=10, batch=64, categoric=False, lr=0.001, gamma = 0.95)
+NN.Compile(optimizer='SGD', loss='MSE', metrics='accuracy', lr=0.001, gamma=0.95)
+            
+model, loss, accuracy = NN.Train(model, X_train, Y_train, 
+                    epochs=20, batch=128, categoric=True)
+
+precision = NN.Evaluate(model, X_test, Y_test, categoric=True)
 ```
 
 ## Example at Keras
@@ -46,6 +49,8 @@ history = model.fit(
     x=X_train, y=Y_train, 
     epochs=10, batch_size=8
 )
+
+model.evaluate(X_test, Y_test)
 
 ```
 
