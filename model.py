@@ -75,29 +75,28 @@ class Model():
 			print('| layer {} with {} inputs and {} outputs neurons |'.format(i+1, 
 				inputs, outputs))
 
-	def Input(self, neurons, input_shape, activation):
+	def Input(self, neurons, input_shape, activation, regularization=None, reg=0):
 		#random weights and bias between -0.5 to 0.5
 		np.random.seed(23)
 		weights = np.random.rand(neurons, input_shape) - 0.5
 		bias = np.random.rand(neurons, 1) - 0.5
-		return [[weights, bias, activation]]
+		return [[weights, bias, activation, regularization, reg]]
 
-	def Dense(self, pr_neurons, next_neurons, model, activation):
+	def Dense(self, pr_neurons, next_neurons, model, activation, regularization=None, reg=0):
 		np.random.seed(23)
 		weights = np.random.rand(next_neurons, pr_neurons) - 0.5
 		bias = np.random.rand(next_neurons, 1) - 0.5
-		model.append([weights, bias, activation])
+		model.append([weights, bias, activation, regularization, reg])
 		return model
 
-	def Output(self, pr_neurons, next_neurons, model, activation):
+	def Output(self, pr_neurons, next_neurons, model, activation, regularization=None, reg=0):
 		np.random.seed(23)
 		weights = np.random.rand(next_neurons, pr_neurons) - 0.5
 		bias = np.random.rand(next_neurons, 1) - 0.5
-		model.append([weights, bias, activation])
+		model.append([weights, bias, activation, regularization, reg])
 		return model
 
-	def Compile(self, optimizer, loss, metrics, lr= 0.001, momentum=True, 
-				gamma=0.95,	l1=False, lambd_l1=0.00001, l2=False, lambd_l2=0.00001,):
+	def Compile(self, optimizer, loss, metrics, lr= 0.001, momentum=True, gamma=0.95):
 		self.optimizer = optimizer
 		self.loss = loss
 		self.lr = lr
@@ -109,22 +108,6 @@ class Model():
 		else:
 			self.momentum = False
 			self.gamma = 0
-
-		if l1:
-			self.l1 = True
-			self.lambd_l1 = lambd_l1
-		else:
-			self.l1 = False
-			self.lambd_l1 = 0
-
-		if l2:
-			self.l2 = True
-			self.lambd_l2 = lambd_l2
-		else:
-			self.l2 = False
-			self.lambd_l2 = 0
-
-
 
 	def Train(self, model, x, y, epochs, batch, categoric):
 		l = []
@@ -163,11 +146,12 @@ class Model():
 
 				reg = 0
 				#weight regularization
-				if self.l1:				
-					reg += np.mean([abs(all_loss[i][1]).mean() for i in range(len(model))])*lambd
-				if self.l2:
-					reg += np.mean([(all_loss[i][1]**2).mean() for i in range(len(model))])*lambd
-				
+				reg_1 = [model[i][4]*abs(all_loss[i][1]).mean() for i in range(len(model)) if model[i][3] == 'l1']
+				reg_1 = np.mean(reg_1) if len(reg_1) > 0 else 0  
+				reg_2 = [model[i][4]*(all_loss[i][1]**2).mean() for i in range(len(model)) if model[i][3] == 'l2']
+				reg_2 = np.mean(reg_2) if len(reg_2) > 0 else 0  
+				reg = reg_1 + reg_2
+
 				#loss
 				avg_loss += (loss_(A[-1][2], y[k])).mean() + reg
 				
@@ -187,8 +171,7 @@ class Model():
 								    	self.gamma*momentum_[j][1] + self.lr*all_loss[j][2]] for j in range(len(model))]
 
 					#update params
-					model = opt_(model, momentum_, self.momentum, l1=self.l1,
-								 lambd_l1=self.lambd_l1, l2=self.l2, lambd_l2=self.lambd_l2) 
+					model = opt_(model, momentum_, self.momentum) 
 				else:
 					#update params
 					model = opt_(model, all_loss, self.momentum) 

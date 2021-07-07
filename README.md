@@ -22,12 +22,12 @@ Or just modify using <b>main.py</b>
 from model import Model
 NN = Model()
 
-model = NN.Input(15, input_shape=X_train.shape[1], activation='ReLu')
-model = NN.Dense(15, 10, model, activation='ReLu')
-model = NN.Output(10, 1, model, activation='Linear')
+model = NN.Input(128, input_shape=X_train.shape[1], activation='ReLu')
+model = NN.Dense(128, 70, model, activation='ReLu', regularization='l2', reg=0.00001) #a little low, I know 
+model = NN.Output(70, 10, model, activation='Softmax', regularization='l1', reg=0.0001)
 
-NN.Compile(optimizer='SGD', loss='MSE', metrics='accuracy', lr=0.001, gamma=0.95)
-            
+NN.Compile(optimizer='SGD', loss='MSE', metrics='accuracy', lr=lr, gamma=gamma)
+
 model, loss, accuracy = NN.Train(model, X_train, Y_train, 
                     epochs=20, batch=128, categoric=True)
 
@@ -40,8 +40,8 @@ from keras import layers, models
 
 model = models.Sequential()
 model.add(layers.Dense(15, activation='relu', input_shape=(X_train.shape[1],)))
-model.add(layers.Dense(10, activation='relu'))
-model.add(layers.Dense(1, activation='linear'))
+model.add(layers.Dense(10, kernel_regularizer=regularizers.l2(0.02), activation='relu'))
+model.add(layers.Dense(1, kernel_regularizer=regularizers.l2(0.02), activation='linear'))
 
 model.compile(optimizer='sgd', loss='mse', metrics= ['accuracy'])
 
