@@ -66,9 +66,10 @@ python -m unittest tests/tests_deds.py
  * Implement forward/backward pass -- done
  * Implement SGD Optimizer -- done
  * Implement Momentum -- done
- * Implement L2 Regularization
+ * Implement L1 Regularization -- done
+ * Implement L2 Regularization -- done
  * Implement Dropout
- * Implement Adam optimizer
+ * Implement Adam optimizer -- done
 * Implement gradcheck (numeric finite difference gradient calc)
 * Implement convolutions
 * Implement LSTM
