@@ -24,7 +24,8 @@ def main(argv):
 			model = NN.Output(70, 10, model, activation='Softmax', regularization='l1', reg=0.0001)
 
 			#compile model
-			NN.Compile(optimizer='SGD', loss='MSE', metrics='accuracy', lr=lr, gamma=gamma)
+			NN.Compile(optimizer='Adam', loss='MSE', metrics='accuracy', lr=lr, 
+					   momentum=False, gamma=gamma)
 
 			#train the model
 			model, loss, accuracy = NN.Train(model, X_train, Y_train, 

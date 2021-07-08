@@ -172,6 +172,8 @@ class Model():
 
 					#update params
 					model = opt_(model, momentum_, self.momentum) 
+				elif self.optimizer == 'Adam':
+					model = opt_(model, all_loss, self.lr) 
 				else:
 					#update params
 					model = opt_(model, all_loss, self.momentum) 
