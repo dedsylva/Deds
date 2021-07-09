@@ -103,6 +103,8 @@ class Model():
 
 		#optimizer with momentum
 		if momentum:
+			exceptions = ['Adam', 'RMSProp'] #optimizers that doesn't have momentum
+			assert self.optimizer not in exceptions, f'{self.optimizer} optimizer does not have momentum property'
 			self.momentum = True
 			self.gamma = gamma
 		else:
@@ -165,18 +167,21 @@ class Model():
 
 				if self.momentum:
 					if count == 1:
-						momentum_ = [[self.lr*all_loss[j][1], self.lr*all_loss[j][2]] for j in range(len(model))]
+						gradients = [[self.lr*all_loss[j][1], self.lr*all_loss[j][2]] for j in range(len(model))]
 					else:
-						momentum_ = [[self.gamma*momentum_[j][0] + self.lr*all_loss[j][1],
-								    	self.gamma*momentum_[j][1] + self.lr*all_loss[j][2]] for j in range(len(model))]
-
-					#update params
-					model = opt_(model, momentum_, self.momentum) 
-				elif self.optimizer == 'Adam':
-					model = opt_(model, all_loss, self.lr) 
+						gradients = [[self.gamma*gradients[j][0] + self.lr*all_loss[j][1],
+								    	self.gamma*gradients[j][1] + self.lr*all_loss[j][2]] for j in range(len(model))]
 				else:
-					#update params
-					model = opt_(model, all_loss, self.momentum) 
+					gradients = all_loss
+				#update params
+				if self.optimizer == 'SGD':					
+					model = opt_(model, gradients, self.momentum) 
+				elif self.optimizer == 'RMSProp':
+					model = opt_(model, gradients, self.lr)
+				elif self.optimizer == 'Adam':
+					model = opt_(model, gradients, self.lr) 
+				else:
+					model = opt_(model, gradients, self.momentum) 
 
 			acc /= count
 			avg_loss /= count

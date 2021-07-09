@@ -20,11 +20,11 @@ def main(argv):
 			NN = Model()
 
 			model = NN.Input(128, input_shape=X_train.shape[1], activation='ReLu')
-			model = NN.Dense(128, 70, model, activation='ReLu', regularization='l2', reg=0.00001)
+			model = NN.Dense(128, 70, model, activation='ReLu', regularization='l2', reg=0.0001)
 			model = NN.Output(70, 10, model, activation='Softmax', regularization='l1', reg=0.0001)
 
 			#compile model
-			NN.Compile(optimizer='Adam', loss='MSE', metrics='accuracy', lr=lr, 
+			NN.Compile(optimizer='RMSProp', loss='MSE', metrics='accuracy', lr=lr, 
 					   momentum=False, gamma=gamma)
 
 			#train the model

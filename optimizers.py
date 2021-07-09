@@ -26,7 +26,8 @@ def SGD(model, gradients, momentum):
 
 	return model
 
-
+# Adam (Adaptive Moment Estimation): the greates of them all.
+# A simple combination of RMSProp + Moentum approach
 def Adam(model, gradients, lr=0.001, b1=0.9, b2=0.999, eps=1e-8):
 	t = 0
 	m_w = [np.zeros_like(model[i][0]) for i in range(len(model))]
@@ -46,3 +47,17 @@ def Adam(model, gradients, lr=0.001, b1=0.9, b2=0.999, eps=1e-8):
 		model[i][0] -= lr*mhat_w / (np.sqrt(vhat_w) + eps) #updating weights
 		model[i][1] -= lr*mhat_b / (np.sqrt(vhat_b) + eps) #updating biases
 	return model
+
+# RMSProp and Momentum take contrasting approaches. 
+# While momentum accelerates our search in direction of minima, 
+# RMSProp impedes our search in direction of oscillations.
+# That's why RMSProp doesn't have momentum
+def RMSProp(model, gradients, lr=0.001, b1=0.9, eps=1e-7):
+	m_w = [np.zeros_like(model[i][0]) for i in range(len(model))]
+	m_b = [np.zeros_like(model[i][1]) for i in range(len(model))]
+	for i in range(len(model)):
+		m_w[i] = b1 * m_w[i] + (1 - b1) * np.square(gradients[-1-i][1])
+		m_b[i] = b1 * m_b[i] + (1 - b1) * np.square(gradients[-1-i][2])
+		model[i][0] -= lr*gradients[-1-i][1] / (np.sqrt(m_w[i]) + eps) #updating weights
+		model[i][1] -= lr*gradients[-1-i][2] / (np.sqrt(m_b[i]) + eps) #updating biases
+	return model	
