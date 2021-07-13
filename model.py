@@ -16,12 +16,25 @@ class Model():
 		# m -- number of input neurons (neurons in the previous layer)
 		# z[i] = W[i-1]x + b[i-1]
 		# a[i] = f(z[i]) -- f is the activation funciton
-		W = model[0]
-		b = model[1]
-		actv = model[2]
-		act = getattr(activation, actv)
-		res = np.dot(W,x) + b
-		return [x, res, act(res)]
+		if model[-2] != 'dropout':
+			W = model[0]
+			b = model[1]
+			actv = model[2]
+			act = getattr(activation, actv)
+			res = np.dot(W,x) + b
+			return [x, res, act(res), None]
+		else:
+			W = model[0]
+			b = model[1]
+			actv = model[2]
+			act = getattr(activation, actv)
+			p = model[-1]
+			y = np.random.binomial(1, p, size=(x.shape[0],1)).astype('float64')
+			y *= x
+			res = np.dot(W,y) + b
+			return [y, res, act(res), p]
+
+		
 
 
 	def backward(self, A, actv, y, loss, output, next_model, all_loss):
@@ -34,7 +47,7 @@ class Model():
 		# but dc_da = (dc_da_t1)*(da_t1_dz_t1)*(dz_t1_da), where t1 means one layer above
 		# dc_db_ = (dc_da)*(da_dz)(dz_db) -- (dz_db) == 1 because z = wx+b
 
-		W_t1 = next_model[0]
+		W_t1 = next_model[0] if A[-1] == None else next_model[0]*A[-1]
 		a_t0 = A[0]
 		z = A[1]
 		a = A[2]
@@ -87,6 +100,11 @@ class Model():
 		weights = np.random.rand(next_neurons, pr_neurons) - 0.5
 		bias = np.random.rand(next_neurons, 1) - 0.5
 		model.append([weights, bias, activation, regularization, reg])
+		return model
+
+	def Dropout(self, model, p):
+		model[-1].append('dropout')
+		model[-1].append(p)
 		return model
 
 	def Output(self, pr_neurons, next_neurons, model, activation, regularization=None, reg=0):
@@ -175,7 +193,7 @@ class Model():
 					gradients = all_loss
 				#update params
 				if self.optimizer == 'SGD':					
-					model = opt_(model, gradients, self.momentum) 
+					model = opt_(model, gradients, self.momentum, self.lr) 
 				elif self.optimizer == 'RMSProp':
 					model = opt_(model, gradients, self.lr)
 				elif self.optimizer == 'Adam':

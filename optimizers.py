@@ -1,8 +1,9 @@
 import numpy as np
 
-def SGD(model, gradients, momentum):
+def SGD(model, gradients, momentum, lr):
 	if momentum:
 		k = 0
+		lr=1
 	else:
 		k = 1
 
@@ -10,19 +11,18 @@ def SGD(model, gradients, momentum):
 		if (model[i][3] == 'l1'): #only layers with l1 regularization
 			ind = np.where(gradients[-1-i][0+k] - model[i][4] == 0) #find where the weights should be updated to zero
 			l, c = ind #index of the line, index of the colum
-			model[i][0] -= (gradients[-1-i][0+k] - model[i][4]) #updating weights
-			model[i][1] -= gradients[-1-i][1+k] #updating biases
-			for j in range(len(l)):
-				weight_i = model[i][0] #weights of layer i
-				weight_i[l[i],c[i]] = 0 #explicitly putting zeros where it should be (making l1 stable)
+			model[i][0] -= (lr*gradients[-1-i][0+k] - model[i][4]) #updating weights
+			model[i][1] -= lr*gradients[-1-i][1+k] #updating biases
+			for j in range(len(l)): #weights of layer i
+				model[i][0][l[j],c[j]] = 0 #explicitly putting zeros where it should be (making l1 stable)
 
 		elif (model[i][3] == 'l2'):
-			model[i][0] -= (gradients[-1-i][0+k] + model[i][4]*model[i][0]) #updating weights
-			model[i][1] -= gradients[-1-i][1+k] #updating biases
+			model[i][0] -= (lr*gradients[-1-i][0+k] + model[i][4]*model[i][0]) #updating weights
+			model[i][1] -= lr*gradients[-1-i][1+k] #updating biases
 
 		else:
-			model[i][0] -= gradients[-1-i][0+k] #updating weights
-			model[i][1] -= gradients[-1-i][1+k] #updating biases
+			model[i][0] -= lr*gradients[-1-i][0+k] #updating weights
+			model[i][1] -= lr*gradients[-1-i][1+k] #updating biases
 
 	return model
 
@@ -36,11 +36,11 @@ def Adam(model, gradients, lr=0.001, b1=0.9, b2=0.999, eps=1e-8):
 	v_b = [np.zeros_like(model[i][1]) for i in range(len(model))]
 	for i in range(len(model)):
 		t+=1
-		m_w[i] = b1 * m_w[i] + (1 - b1) * gradients[-1-i][1]
-		v_w[i] = b2 * v_w[i] + (1 - b2) * np.square(gradients[-1-i][1])
+		m_w[i] = b1 * m_w[i] + (1 - b1) * gradients[-1-i][1] #estimates 1st momentum (mean) of gradient 
+		v_w[i] = b2 * v_w[i] + (1 - b2) * np.square(gradients[-1-i][1]) #estimates 2nd momentum (variance) of gradient 
 		m_b[i] = b1 * m_b[i] + (1 - b1) * gradients[-1-i][2]
 		v_b[i] = b2 * v_b[i] + (1 - b2) * np.square(gradients[-1-i][2])
-		mhat_w = m_w[i] / (1. - b1**t)
+		mhat_w = m_w[i] / (1. - b1**t) #corrects bias towards zero (initially set to vector of 0s, creates bias around it)
 		vhat_w = v_w[i] / (1. - b2**t)
 		mhat_b = m_b[i] / (1. - b1**t)
 		vhat_b = v_b[i] / (1. - b2**t)
