@@ -29,4 +29,7 @@ def dSoftmax(x):
 	return x*(1-x)
 
 def Tanh(x):
-	(np.exp(x) - np.exp(-x))/(np.exp(x) + np.exp(-x))
+	return np.tanh(x)
+
+def dTanh(x):
+	return 1 - np.square(Tanh(x))

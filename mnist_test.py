@@ -46,7 +46,7 @@ b_3 = np.random.rand(10, 1) - 0.5
 
 epochs = 40
 BS = 128
-lr = 0.0001
+lr = 0.001
 gamma = 0.95
 
 losses = []
@@ -58,13 +58,14 @@ for i in range(epochs):
 	acc = 0
 	loss = 0
 	count = 0
-	np.random.seed(23)
+	p=0.5
 	samp = np.random.randint(0, y.shape[0], size=y.shape[0]//BS)
-	#samp = np.arange(0, y.shape[0], BS) #batch sample size
 	for k in samp:
 		#forward
 		z_1 = np.dot(weights_1, x[k])+ b_1
-		a_1 = relu(z_1) 
+		a_1 = relu(z_1)
+		#drop = np.random.binomial(1, p, size=(a_1.shape[0],1)).astype('float64')/p
+		#a_1 *= drop
 		z_2 = np.dot(weights_2, a_1) + b_2
 		a_2 = relu(z_2)
 		z_3 = np.dot(weights_3, a_2) + b_3
@@ -84,18 +85,18 @@ for i in range(epochs):
 
 		#layer 2
 		dc_dz_t1 = dc_dz_o
-		dz_t1_da = weights_3.T
+		dz_t1_da = weights_3#*p
 		da_dz_2 = dReLu(z_2) 
-		dc_dz_2 = np.dot(dz_t1_da, dc_dz_t1)* da_dz_2
+		dc_dz_2 = np.dot(dc_dz_t1.T, dz_t1_da).T* da_dz_2
 		dz_dw_2 = a_1.T
 		dw2 = np.dot(dc_dz_2, dz_dw_2)/y[k].shape[0]
 		db2 = dc_dz_2/y[k].shape[0]
 
 		#layer 1
 		dc_dz_t1 = dc_dz_2
-		dz_t1_da = weights_2.T
+		dz_t1_da = weights_2
 		da_dz_1 = dReLu(z_1) 
-		dc_dz_1 = np.dot(dz_t1_da, dc_dz_t1)* da_dz_1
+		dc_dz_1 = np.dot(dc_dz_t1.T, dz_t1_da).T* da_dz_1
 		dz_dw_1 = x[k].T
 		dw1 = np.dot(dc_dz_1, dz_dw_1)/y[k].shape[0]
 		db1 = dc_dz_1/y[k].shape[0]

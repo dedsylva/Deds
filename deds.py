@@ -20,8 +20,8 @@ def main(argv):
 			NN = Model()
 
 			model = NN.Input(128, input_shape=X_train.shape[1], activation='ReLu')
-			model = NN.Dense(128, 70, model, activation='ReLu', regularization='l2', reg=0.0001)
-			model = NN.Dropout(model, p=0.33)
+			model = NN.Dense(128, 70, model, activation='ReLu')#, regularization='l2', reg=0.0001)
+			model = NN.Dropout(model, p=0.5)
 			model = NN.Output(70, 10, model, activation='Softmax')
 
 			#compile model

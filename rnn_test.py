@@ -25,9 +25,9 @@ def loss(inputs, targets, hprev):
 	for t in range(len(inputs)):
 		xs[t] = np.zeros((vocab_size, 1))
 		xs[t][inputs[t]] = 1 
-		hs[t] = tanh(np.dot(Wxh, xs[t]) + np.dot(Whh, hs[t-1]) + bh) #hidden state
-		ys[t] = np.dot(Why, hs[t]) + by #unnormalized log probabilities for next chars
-		ps[t] = softmax(ys[t]) #
+		hs[t] = tanh(np.dot(Wxh, xs[t]) + np.dot(Whh, hs[t-1]) + bh) # a_1[t] hidden state
+		ys[t] = np.dot(Why, hs[t]) + by # z_2[t]unnormalized log probabilities for next chars
+		ps[t] = softmax(ys[t]) #a_2[t]
 		loss += -np.log(ps[t][targets[t],0])
 
 	#backward pass
@@ -41,8 +41,26 @@ def loss(inputs, targets, hprev):
 		dy[targets[t]] -= 1 #NAO ENTENDI, NAO CONCORDO
 		#dy = - np.copy(ps[t]) -- PRA MIM DEVERIA SER ISSO (dc_dz)
 
+		#output layer
 		dWhy += np.dot(dy, hs[t].T)
 		dby += dy
+
+		#hidden layer
+		dh = np.dot(Why.T, dy) + dhnext #dc_da_1 esse ultimo termo n ta claro, deve ser algo da backprogragation com tempo
+		#(1 - hs[t] * hs[t]) da_1_dz_1
+		dhraw = (1 - hs[t] * hs[t]) * dh #dc_dz_1
+		dbh += dhraw #db1
+		dWxh += np.dot(dhraw, xs[t].T) #dw1
+		dWhh += np.dot(dhraw, hs[t-1].T) #novo termo devido ao novo weight
+		dhnext = np.dot(Whh.T, dhraw)
+		###########################
+		###########################
+		##### PAREI AQUI ##########
+		#https://github.com/llSourcell/recurrent_neural_network/blob/master/RNN.ipynb
+		#https://www.youtube.com/watch?v=BwmddtPFWtA&ab_channel=SirajRaval --38min
+		#https://mmuratarat.github.io/2019-02-07/bptt-of-rnn
+		###########################
+		###########################
 
 
 data = open('kafka.txt', 'r').read()

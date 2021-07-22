@@ -30,9 +30,9 @@ class Model():
 			act = getattr(activation, actv)
 			p = model[-1]
 			y = np.random.binomial(1, p, size=(x.shape[0],1)).astype('float64')
-			y *= x
-			res = np.dot(W,y) + b
-			return [y, res, act(res), p]
+			x *= y
+			res = np.dot(W,x) + b
+			return [x, res, act(res), p]
 
 		
 
@@ -103,6 +103,8 @@ class Model():
 		return model
 
 	def Dropout(self, model, p):
+		if p < 0 or p > 1:
+			raise ValueError("Dropout Probability has to be between 0 and 1, but got {}".format(p))
 		model[-1].append('dropout')
 		model[-1].append(p)
 		return model
