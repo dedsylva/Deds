@@ -10,13 +10,8 @@ def softmax(x):
 	return np.exp(x-max_)/np.sum(np.exp(x-max_))
 
 def dReLu(x):
-	data = np.copy(x)
-	for i in range(x.shape[0]):
-		for j in range(x.shape[1]):
-			if(x[i][j] > 0):
-				data[i][j] = 1
-			else:
-				data[i][j] = 0
+	data = np.array(x, copy=True)
+	data[x<= 0] = 0
 	return data
 
 (train_images, train_labels), (test_images, test_labels) = mnist.load_data()
@@ -147,4 +142,4 @@ plt.plot(range(epochs), accuracy, label='accuracy')
 plt.plot(range(epochs), losses, label='loss')
 plt.title('Trainning results')
 plt.legend()
-plt.show()
+plt.show

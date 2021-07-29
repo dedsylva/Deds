@@ -6,11 +6,11 @@ def sigmoid(x):
 def tanh(x):
 	return np.tanh(x)	
 
-def Softmax(x):
+def softmax(x):
 	max_ = np.max(x)
 	return np.exp(x-max_)/sum(np.exp(x-max_))
 
-def loss(inputs, targets, hprev):
+def lossFun(inputs, targets, hprev):
 	#xs = input one hot encoded chars
 	#hs = hidden state outputs
 	#ys = target values
@@ -53,15 +53,37 @@ def loss(inputs, targets, hprev):
 		dWxh += np.dot(dhraw, xs[t].T) #dw1
 		dWhh += np.dot(dhraw, hs[t-1].T) #novo termo devido ao novo weight
 		dhnext = np.dot(Whh.T, dhraw)
-		###########################
-		###########################
-		##### PAREI AQUI ##########
-		#https://github.com/llSourcell/recurrent_neural_network/blob/master/RNN.ipynb
-		#https://www.youtube.com/watch?v=BwmddtPFWtA&ab_channel=SirajRaval --38min
-		#https://mmuratarat.github.io/2019-02-07/bptt-of-rnn
-		###########################
-		###########################
 
+	#exploding gradients solution
+	for dparam in [dWxh, dWhh, dWhy, dbh, dby]:
+		np.clip(dparam, -5, 5, out=dparam)
+
+	return loss, dWxh, dWhh, dWhy, dbh, dby, hs[len(inputs)-1]
+
+
+#prediction, one full forward pass
+def sample(h, seed_ix, n):
+	x = np.zeros((vocab_size, 1))
+	x[seed_ix] = 1
+	ixes = [] # list to store generated chars
+
+	for t in range(n):
+		#forward pass
+		h = tanh(np.dot(Wxh, x) + np.dot(Whh, h) + bh)
+		y = np.dot(Why, h) + by
+
+		#taken probabilities of next char
+		p = softmax(y)
+
+		#pick the one with highest prob
+		ix = np.random.choice(range(vocab_size), p=p.ravel())
+
+		x = np.zeros((vocab_size, 1))
+		x[ix] = 1
+		ixes.append(ix)
+
+	txt = ''.join(ix_to_char[ix] for ix in ixes)
+	print('----\n {} \n----'.format(txt))
 
 data = open('kafka.txt', 'r').read()
 chars = list(set(data))
@@ -78,7 +100,7 @@ vector_for_char_a[char_to_ix['a']] = 1
 #hyperparameters
 hidden_size = 100
 seq_length = 25 #25 chars generated every timestep
-lr = 1e-1
+learning_rate = 1e-1
 
 #model parameters
 Wxh = np.random.randn(hidden_size, vocab_size) * 0.01 #input to hidden
@@ -86,8 +108,49 @@ bh = np.zeros((hidden_size, 1)) #hidden bias
 
 Whh = np.random.randn(hidden_size, hidden_size) * 0.01 #hidden to hidden
 
-Why = np.random.randn(hidden_size, vocab_size) * 0.01 #hidden to output
-bh = np.zeros((vocab_size, 1)) #output bias
+Why = np.random.randn(vocab_size, hidden_size) * 0.01 #hidden to output
+by = np.zeros((vocab_size, 1)) #output bias
 
-#forward pass
-#h[t] = actv(Wx[t] + Uh[t-1])
+hprev = np.zeros((hidden_size,1)) # reset RNN memory  
+#predict the 200 next characters given 'a'
+sample(hprev,char_to_ix['a'],200)
+
+#Training
+p=0  
+inputs = [char_to_ix[ch] for ch in data[p:p+seq_length]]
+targets = [char_to_ix[ch] for ch in data[p+1:p+seq_length+1]]
+
+n, p = 0, 0
+mWxh, mWhh, mWhy = np.zeros_like(Wxh), np.zeros_like(Whh), np.zeros_like(Why)
+mbh, mby = np.zeros_like(bh), np.zeros_like(by) # memory variables for Adagrad 
+
+smooth_loss = -np.log(1.0/vocab_size)*seq_length # loss at iteration 0
+
+while n<=1000*100: 
+	# prepare inputs (we're sweeping from left to right in steps seq_length long)
+	# check "How to feed the loss function to see how this part works
+	if p+seq_length+1 >= len(data) or n == 0:
+		hprev = np.zeros((hidden_size,1)) # reset RNN memory
+		p = 0 # go from start of data
+	inputs = [char_to_ix[ch] for ch in data[p:p+seq_length]]
+	targets = [char_to_ix[ch] for ch in data[p+1:p+seq_length+1]]
+
+	# forward seq_length characters through the net and fetch gradient
+	loss, dWxh, dWhh, dWhy, dbh, dby, hprev = lossFun(inputs, targets, hprev)
+	smooth_loss = smooth_loss * 0.999 + loss * 0.001
+
+	 # sample from the model now and then
+	if n % 1000 == 0:
+	 	print('iter %d, loss: %f' % (n, smooth_loss)) # print progress
+	 	sample(hprev, inputs[0], 200)
+
+	# perform parameter update with Adagrad  
+	for param, dparam, mem in zip([Wxh, Whh, Why, bh, by],
+	 	[dWxh, dWhh, dWhy, dbh, dby],
+	 	[mWxh, mWhh, mWhy, mbh, mby]):
+
+		mem += dparam * dparam
+		param += -learning_rate * dparam / np.sqrt(mem + 1e-8) # adagrad update
+
+	p += seq_length # move data pointer
+	n += 1	 	
