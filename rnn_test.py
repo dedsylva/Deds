@@ -28,6 +28,7 @@ def lossFun(inputs, targets, hprev):
 		hs[t] = tanh(np.dot(Wxh, xs[t]) + np.dot(Whh, hs[t-1]) + bh) # a_1[t] hidden state
 		ys[t] = np.dot(Why, hs[t]) + by # z_2[t]unnormalized log probabilities for next chars
 		ps[t] = softmax(ys[t]) #a_2[t]
+
 		loss += -np.log(ps[t][targets[t],0])
 
 	#backward pass
@@ -85,7 +86,7 @@ def sample(h, seed_ix, n):
 	txt = ''.join(ix_to_char[ix] for ix in ixes)
 	print('----\n {} \n----'.format(txt))
 
-data = open('kafka.txt', 'r').read()
+data = open('harry_potter.txt', 'r', encoding='UTF-8').read()
 chars = list(set(data))
 data_size, vocab_size = len(data), len(chars)
 

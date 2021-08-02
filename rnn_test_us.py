@@ -14,12 +14,15 @@ def sigmoid(x):
 def tanh(x):
 	return np.tanh(x)	
 
+def dtanh(x):
+	return 1 - np.square(np.tanh(x))
+
 def softmax(x):
 	max_ = np.max(x)
 	return np.exp(x-max_)/sum(np.exp(x-max_))
 
 
-data = open('kafka.txt', 'r').read()
+data = open('harry_potter.txt', 'r', encoding='UTF-8').read()
 chars = list(set(data)) #set filters unique characters already
 data_size, vocab_size = len(data), len(chars)
 
@@ -46,9 +49,10 @@ Whh = np.random.randn(hidden_size, hidden_size) * 0.01 #hidden -> hidden
 Why = np.random.randn(vocab_size, hidden_size) * 0.01 #hidden -> output
 by =  np.zeros((vocab_size, 1)) #output bias
 
-#DON'T UNDERSTAND THIS YET
-hprev = np.zeros((hidden_size, 1)) #reset RNN memory
+#memory of the neural network in each iteration
+hprev = np.zeros((hidden_size, 1))
 
+smooth_loss = -np.log(1.0/vocab_size)*seq_length
 
 #Training (trying to predict next character)
 n,p = 0,0
@@ -75,35 +79,31 @@ while n<= ITERATIONS:
 	x, y = np.zeros((m, vocab_size,1)), np.zeros((m, vocab_size,1))
 	z_1, a_1 = np.zeros((m, hidden_size,1)), np.zeros((m, hidden_size,1))
 	z_2, a_2 = np.zeros((m, vocab_size,1)), np.zeros((m, vocab_size,1))
-	a_1[-1] = np.copy(hprev)
+	a_1[-1] = np.copy(hprev) #copying the last state of the network in previou iteration
 
-	acc, loss = 0,0
+	loss = 0
 	
 
 	#forward pass
 	for t in range(len(inputs)):
 
-		#x[t] = np.zeros((vocab_size, 1)) 
 		x[t][inputs[t]] = 1
-		#y[t] = np.zeros((vocab_size, 1)) 
 		y[t][outputs[t]] = 1
 
 		z_1[t] = np.dot(Wxh, x[t]) + np.dot(Whh, a_1[t-1]) + bh
-		a_1[t] = relu(z_1[t])
+		a_1[t] = tanh(z_1[t])
 		z_2[t] = np.dot(Why, a_1[t]) + by
 		a_2[t] = softmax(z_2[t])
 
 		#loss computation
 		#loss -= np.log(a_2[t][outputs[t], 0])
-		loss -= (y[t]*np.log(a_2[t])).mean() #categorical cross entropy
-		loss -= (a_2[t]*np.log(a_2[t])).mean() #categorical cross entropy
+		loss += -(np.log(a_2[t][outputs[t],0])) #a bit weird loss
+		#loss -= (y[t]*np.log(a_2[t])).mean() #categorical cross entropy
+		#loss -= (a_2[t]*np.log(a_2[t])).mean() #categorical cross entropy
 
-		#accuracy computation
-		if np.argmax(a_2[t]) == outputs[t]:
-			acc += 1
 
-	acc /= len(inputs)
 	#loss /= len(inputs)
+	smooth_loss = smooth_loss * 0.999 + loss * 0.001
 
 	#gradients
 	dWxh = np.zeros_like(Wxh)
@@ -126,16 +126,16 @@ while n<= ITERATIONS:
 		dc_dz_t1 = dc_dz_o
 		dz_t1_da = Why
 		dc_da = np.dot(dc_dz_t1.T, dz_t1_da).T
-		da_dw = np.dot(dReLu(z_1[t]),x[t].T) + dReLu(z_1[t])*np.dot(Whh, hnext)
+		da_dw = np.dot(dtanh(z_1[t]),x[t].T) + dtanh(z_1[t])*np.dot(Whh, hnext)
 		dWxh = dc_da*da_dw/len(y[t])
-		dbh = dc_da *dReLu(z_1[t]) /len(y[t])
+		dbh = dc_da *dtanh(z_1[t]) /len(y[t])
 
 		hnext += da_dw #time update
 
 		#hidden -> hidden layer
 		dc_dz_t1 = dc_dz_o
 		dz_t1_da = Why
-		da_dz = dReLu(z_1[t])
+		da_dz = dtanh(z_1[t])
 		dc_dz = np.dot(dc_dz_t1.T, dz_t1_da).T* da_dz
 		dz_dw = a_1[t-1].T if t!=0 else np.zeros_like(a_1[0]).T
 		dWhh = np.dot(dc_dz, dz_dw)/len(y[t])
@@ -143,11 +143,6 @@ while n<= ITERATIONS:
 		#exploding gradients solution
 		for dparam in [dWxh, dWhh, dWhy, dbh, dby]:
 			np.clip(dparam, -5, 5, out=dparam)
-
-
-	#sample from model to see the performance (just for showing off)
-	if (n+1) % 1000 == 0:
-		print(f'epoch: {n+1}, accuracy: {acc}, loss: {loss}')
 
 
 	#optimizing parameters
@@ -158,6 +153,33 @@ while n<= ITERATIONS:
 
 		mem += dparam * dparam
 		param += -lr * dparam / np.sqrt(mem + 1e-8) # adagrad update
+
+	hprev = a_1[-1]
+
+	#sample from model to see the performance (just for showing off)
+	if (n+1) % 1000 == 0:
+		print(f'epoch: {n+1}, loss: {loss}, smooth_loss: {smooth_loss}')
+
+		#generate 200 characters to see how the network is
+		x = np.zeros((vocab_size,1))
+		x[inputs[0]] = 1
+		indexes = []
+		h = hprev
+		for t in range(200):
+			h = tanh(np.dot(Wxh, x) + np.dot(Whh, h) + bh)
+			predict = softmax(np.dot(Why, h) + by)
+
+			ix = np.random.choice(range(vocab_size), p=predict.ravel())
+
+			#saving the predicted character 
+			x = np.zeros((vocab_size,1))
+			x[ix] = 1
+
+			indexes.append(ix)
+
+		txt = ''.join(ix_to_char[ix] for ix in indexes)
+		print('----\n {} \n----'.format(txt))
+
 
 	p += seq_length # move data pointer
 	n += 1	 	
