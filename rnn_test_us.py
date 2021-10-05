@@ -21,8 +21,9 @@ def softmax(x):
 	max_ = np.max(x)
 	return np.exp(x-max_)/sum(np.exp(x-max_))
 
-
-data = open('harry_potter.txt', 'r', encoding='UTF-8').read()
+#source = 'harry_potter.txt'
+source = 'kafka.txt'
+data = open(source, 'r', encoding='UTF-8').read()
 chars = list(set(data)) #set filters unique characters already
 data_size, vocab_size = len(data), len(chars)
 
@@ -62,7 +63,7 @@ ITERATIONS = 100000
 mWxh, mWhh, mWhy = np.zeros_like(Wxh), np.zeros_like(Whh), np.zeros_like(Why)
 mbh, mby = np.zeros_like(bh), np.zeros_like(by) # memory variables for Adagrad 
 
-
+all_loss = []
 
 while n<= ITERATIONS:
 	#when we finish the training data
@@ -104,6 +105,7 @@ while n<= ITERATIONS:
 
 	#loss /= len(inputs)
 	smooth_loss = smooth_loss * 0.999 + loss * 0.001
+	all_loss.append(smooth_loss)
 
 	#gradients
 	dWxh = np.zeros_like(Wxh)
@@ -145,20 +147,11 @@ while n<= ITERATIONS:
 			np.clip(dparam, -5, 5, out=dparam)
 
 
-	#optimizing parameters
-	# perform parameter update with Adagrad  
-	for param, dparam, mem in zip([Wxh, Whh, Why, bh, by],
-	 	[dWxh, dWhh, dWhy, dbh, dby],
-	 	[mWxh, mWhh, mWhy, mbh, mby]):
-
-		mem += dparam * dparam
-		param += -lr * dparam / np.sqrt(mem + 1e-8) # adagrad update
-
 	hprev = a_1[-1]
 
 	#sample from model to see the performance (just for showing off)
-	if (n+1) % 1000 == 0:
-		print(f'epoch: {n+1}, loss: {loss}, smooth_loss: {smooth_loss}')
+	if n % 1000 == 0:
+		print(f'epoch: {n}, loss: {loss}, smooth_loss: {smooth_loss}')
 
 		#generate 200 characters to see how the network is
 		x = np.zeros((vocab_size,1))
@@ -181,5 +174,37 @@ while n<= ITERATIONS:
 		print('----\n {} \n----'.format(txt))
 
 
+
+	#optimizing parameters
+
+	for param, dparam, mem in zip([Wxh, Whh, Why, bh, by],
+	 	[dWxh, dWhh, dWhy, dbh, dby],
+	 	[mWxh, mWhh, mWhy, mbh, mby]):
+#		
+#
+#		t = 0
+#		m = [np.zeros_like(param[i]) for i in range(len(param))]
+#		v = [np.zeros_like(param[i]) for i in range(len(param))]		
+#		for i in range(len(m)):
+#			t+=1
+#			m[i] = b1 * m[i] + (1 - b1) * dparam[i] #estimates 1st momentum (mean) of gradient 
+#			v[i] = b2 * v[i] + (1 - b2) * np.square(dparam[i]) #estimates 2nd momentum (variance) of gradient 
+#			mhat = m[i] / (1. - b1**t) #corrects bias towards zero (initially set to vector of 0s, creates bias around it)
+#			vhat = v[i] / (1. - b2**t)
+#
+#			param[i] -= lr*mhat / (np.sqrt(vhat) + eps) #updating params
+#			
+
+		mem += dparam * dparam
+		param += -lr * dparam / np.sqrt(mem + 1e-8) # adagrad update
+
+
 	p += seq_length # move data pointer
 	n += 1	 	
+
+
+
+import matplotlib.pyplot as plt
+plt.plot(all_loss, label='loss')
+plt.title('Loss During Training')
+plt.show()	

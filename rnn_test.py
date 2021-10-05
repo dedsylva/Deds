@@ -86,7 +86,9 @@ def sample(h, seed_ix, n):
 	txt = ''.join(ix_to_char[ix] for ix in ixes)
 	print('----\n {} \n----'.format(txt))
 
-data = open('harry_potter.txt', 'r', encoding='UTF-8').read()
+#source = 'harry_potter.txt'
+source = 'kafka.txt'
+data = open(source, 'r', encoding='UTF-8').read()
 chars = list(set(data))
 data_size, vocab_size = len(data), len(chars)
 
@@ -126,6 +128,7 @@ mWxh, mWhh, mWhy = np.zeros_like(Wxh), np.zeros_like(Whh), np.zeros_like(Why)
 mbh, mby = np.zeros_like(bh), np.zeros_like(by) # memory variables for Adagrad 
 
 smooth_loss = -np.log(1.0/vocab_size)*seq_length # loss at iteration 0
+all_loss = []
 
 while n<=1000*100: 
 	# prepare inputs (we're sweeping from left to right in steps seq_length long)
@@ -139,7 +142,7 @@ while n<=1000*100:
 	# forward seq_length characters through the net and fetch gradient
 	loss, dWxh, dWhh, dWhy, dbh, dby, hprev = lossFun(inputs, targets, hprev)
 	smooth_loss = smooth_loss * 0.999 + loss * 0.001
-
+	all_loss.append(smooth_loss)
 	 # sample from the model now and then
 	if n % 1000 == 0:
 	 	print('iter %d, loss: %f' % (n, smooth_loss)) # print progress
@@ -155,3 +158,9 @@ while n<=1000*100:
 
 	p += seq_length # move data pointer
 	n += 1	 	
+
+
+import matplotlib.pyplot as plt
+plt.plot(all_loss, label='loss')
+plt.title('Loss during Training')	
+plt.show()
