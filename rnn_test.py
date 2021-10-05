@@ -39,8 +39,7 @@ def lossFun(inputs, targets, hprev):
 	for t in reversed(range(len(inputs))):
 		#output probabilities
 		dy = np.copy(ps[t])
-		dy[targets[t]] -= 1 #NAO ENTENDI, NAO CONCORDO
-		#dy = - np.copy(ps[t]) -- PRA MIM DEVERIA SER ISSO (dc_dz)
+		dy[targets[t]] -= 1 
 
 		#output layer
 		dWhy += np.dot(dy, hs[t].T)

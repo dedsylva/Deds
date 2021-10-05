@@ -53,7 +53,7 @@ by =  np.zeros((vocab_size, 1)) #output bias
 #memory of the neural network in each iteration
 hprev = np.zeros((hidden_size, 1))
 
-smooth_loss = -np.log(1.0/vocab_size)*seq_length
+#smooth_loss = -np.log(1.0/vocab_size)*seq_length
 
 #Training (trying to predict next character)
 n,p = 0,0
@@ -79,7 +79,8 @@ while n<= ITERATIONS:
 	m = len(inputs)
 	x, y = np.zeros((m, vocab_size,1)), np.zeros((m, vocab_size,1))
 	z_1, a_1 = np.zeros((m, hidden_size,1)), np.zeros((m, hidden_size,1))
-	z_2, a_2 = np.zeros((m, vocab_size,1)), np.zeros((m, vocab_size,1))
+	#z_2, a_2 = np.zeros((m, vocab_size,1)), np.zeros((m, vocab_size,1))
+	a_2 = np.zeros((m, vocab_size,1))
 	a_1[-1] = np.copy(hprev) #copying the last state of the network in previou iteration
 
 	loss = 0
@@ -93,8 +94,8 @@ while n<= ITERATIONS:
 
 		z_1[t] = np.dot(Wxh, x[t]) + np.dot(Whh, a_1[t-1]) + bh
 		a_1[t] = tanh(z_1[t])
-		z_2[t] = np.dot(Why, a_1[t]) + by
-		a_2[t] = softmax(z_2[t])
+		a_2[t] = softmax(np.dot(Why, a_1[t]) + by)
+		#a_2[t] = softmax(z_2[t])
 
 		#loss computation
 		#loss -= np.log(a_2[t][outputs[t], 0])
@@ -104,8 +105,8 @@ while n<= ITERATIONS:
 
 
 	#loss /= len(inputs)
-	smooth_loss = smooth_loss * 0.999 + loss * 0.001
-	all_loss.append(smooth_loss)
+	#smooth_loss = smooth_loss * 0.999 + loss * 0.001
+	#all_loss.append(smooth_loss)
 
 	#gradients
 	dWxh = np.zeros_like(Wxh)
@@ -118,29 +119,23 @@ while n<= ITERATIONS:
 	#backward pass
 	for t in range(len(inputs)):
 		#hidden -> output layer
-		dc_dz_o = a_2[t] - y[t]
-		dz_dw_o = a_1[t].T
-		dWhy += np.dot(dc_dz_o,dz_dw_o)/len(y[t])
-		dby += dc_dz_o/len(y[t])
+		dc_dz_o = (a_2[t] - y[t])/len(y[t])
+		dWhy += np.dot(dc_dz_o,a_1[t].T)#/len(y[t])
+		dby += dc_dz_o
 
 
 		#input -> hidden layer
-		dc_dz_t1 = dc_dz_o
-		dz_t1_da = Why
-		dc_da = np.dot(dc_dz_t1.T, dz_t1_da).T
+		dc_da = np.dot(dc_dz_o.T, Why).T
 		da_dw = np.dot(dtanh(z_1[t]),x[t].T) + dtanh(z_1[t])*np.dot(Whh, hnext)
-		dWxh = dc_da*da_dw/len(y[t])
-		dbh = dc_da *dtanh(z_1[t]) /len(y[t])
+		dWxh = dc_da*da_dw
+		dbh = dc_da *dtanh(z_1[t]) 
 
 		hnext += da_dw #time update
 
 		#hidden -> hidden layer
-		dc_dz_t1 = dc_dz_o
-		dz_t1_da = Why
-		da_dz = dtanh(z_1[t])
-		dc_dz = np.dot(dc_dz_t1.T, dz_t1_da).T* da_dz
+		dc_dz = np.dot(dc_dz_o.T, Why).T* dtanh(z_1[t])
 		dz_dw = a_1[t-1].T if t!=0 else np.zeros_like(a_1[0]).T
-		dWhh = np.dot(dc_dz, dz_dw)/len(y[t])
+		dWhh = np.dot(dc_dz, dz_dw)
 
 		#exploding gradients solution
 		for dparam in [dWxh, dWhh, dWhy, dbh, dby]:
@@ -151,7 +146,7 @@ while n<= ITERATIONS:
 
 	#sample from model to see the performance (just for showing off)
 	if n % 1000 == 0:
-		print(f'epoch: {n}, loss: {loss}, smooth_loss: {smooth_loss}')
+		print(f'epoch: {n}, loss: {loss}') 
 
 		#generate 200 characters to see how the network is
 		x = np.zeros((vocab_size,1))
