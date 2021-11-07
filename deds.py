@@ -43,7 +43,7 @@ def main(argv):
 			db = Wheat()
 			train = float(data[1][1]) if len(data) > 1 else 0.9
 			X_train, X_test, Y_train, Y_test = db.get_data(train=train)
-			epochs = 10000
+			epochs = 1000
 			BS = 8
 			lr = 0.001
 			NN = Model()

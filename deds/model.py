@@ -1,4 +1,6 @@
 import numpy as np 
+import time
+from tqdm import tqdm
 from deds import activation
 from deds import losses
 from deds import optimizers
@@ -148,7 +150,11 @@ class Model():
 		#print summary
 		self.summary(model)
 
-		for i in range(epochs):
+		pbar = tqdm(range(epochs))
+		timing = epochs/(epochs*100)
+		for i, pb in enumerate(pbar):
+			pbar.set_description(f"Training... epoch {i}/{epochs}")
+			time.sleep(timing)
 			avg_loss = 0
 			acc = 0
 			count = 0

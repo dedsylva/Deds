@@ -3,17 +3,15 @@
 ![](https://img.shields.io/badge/tests-passing-green)
 
 ## Objective
-Your simple numpy from scratch deep learning library, created just to keep track of what's happening behind the scenes of TensorFlow. The implementation is similar to Keras. Currently there's only available the Dense format with a few simple functions and the SGD (Stochastic Gradient Descent) optimizer.
+Your simple numpy from scratch deep learning library, created just to keep track of what's happening behind the scenes of TensorFlow. The implementation is similar to Keras. Currently there's only available the Dense format.
 
 ## Implementation
 For a simple test
 
 ```python
 python deds.py model=MNIST #mnist
-python deds.py model=Wheat #wheat seeds class prediction
+python deds.py model=Wheat #wheat seeds 
 ```
-
-Or just modify using <b>main.py</b>
 
 ## Example at Deds
 ```python
@@ -23,7 +21,7 @@ from model import Model
 NN = Model()
 
 model = NN.Input(128, input_shape=X_train.shape[1], activation='ReLu')
-model = NN.Dense(128, 70, model, activation='ReLu', regularization='l2', reg=0.00001) #a little low, I know 
+model = NN.Dense(128, 70, model, activation='ReLu', regularization='l2', reg=0.00001) 
 model = NN.Output(70, 10, model, activation='Softmax', regularization='l1', reg=0.0001)
 
 NN.Compile(optimizer='SGD', loss='MSE', metrics='accuracy', lr=lr, gamma=gamma)
