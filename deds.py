@@ -1,7 +1,5 @@
 import sys
-import numpy as np
 from deds.model import Model
-import math
 from deds.database import Wheat, MNIST
 
 def main(argv):
