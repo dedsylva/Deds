@@ -3,6 +3,14 @@ from deds import activation
 from deds import losses
 from deds import optimizers
 
+# **** Model is The Constructor Basis of the Neural Network ***
+# model is a list where:
+# len(model) = number of layers (counting the input and output)
+# model[i][0] is the Weights matrix of layer i
+# model[i][1] is the bias vector of layer i
+# model[i][2] is the activation of the layer i <<-- limitation: currently we can only have the same activation for the entire layer
+
+
 class Model():
 	def __init__(self):
 		pass
