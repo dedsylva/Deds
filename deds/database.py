@@ -9,7 +9,7 @@ class Wheat():
 	def get_data(self, train=0.9):
 
 		#loads data
-		df = pd.read_csv('seeds_dataset.csv')
+		df = pd.read_csv('../datasets/seeds_dataset.csv')
 		m = df.shape[0]
 		n = df.shape[1]
 		data = np.zeros((m,n))
