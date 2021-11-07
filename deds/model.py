@@ -79,7 +79,7 @@ class Model():
 			#dc_dw
 			dc_dz_t1 = all_loss[0]
 			dz_t1_da = W_t1
-			da_dz = d_act_(z)
+			da_dz = d_act_(a)
 			dc_dz = np.dot((dc_dz_t1).T, dz_t1_da).T *da_dz
 			dz_dw = a_t0.T
 			dc_dw = np.dot(dc_dz, dz_dw)/y.shape[0]
@@ -220,7 +220,7 @@ class Model():
 			acc /= count
 			avg_loss /= count
 
-			print(f'epoch: {i+1}, accuracy: {acc}, loss: {avg_loss}')
+			print(f'accuracy: {acc}, loss: {avg_loss}')
 			l.append(avg_loss)
 			ac.append(acc)
 
