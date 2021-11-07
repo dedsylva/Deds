@@ -1,7 +1,7 @@
 import numpy as np 
-import activation
-import losses
-import optimizers
+from deds import activation
+from deds import losses
+from deds import optimizers
 
 class Model():
 	def __init__(self):

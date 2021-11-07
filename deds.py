@@ -1,9 +1,8 @@
 import sys
 import numpy as np
-from model import Model
-import pandas as pd
+from deds.model import Model
 import math
-from database import Wheat, MNIST
+from deds.database import Wheat, MNIST
 
 def main(argv):
 	data = [a.split('=') for a in argv]
@@ -29,7 +28,7 @@ def main(argv):
 					   momentum=True, gamma=gamma)
 
 			#train the model
-			model, loss, accuracy = NN.Train(model, X_train, Y_train, 
+			model, losses, accuracy = NN.Train(model, X_train, Y_train, 
 				epochs=epochs, batch=BS, categoric=True)
 
 			#evaluate the network
@@ -37,7 +36,7 @@ def main(argv):
 
 			import matplotlib.pyplot as plt
 			plt.plot(range(epochs), accuracy, label='accuracy')
-			plt.plot(range(epochs), loss, label='loss')
+			plt.plot(range(epochs), losses, label='loss')
 			plt.title('Trainning results')
 			plt.legend()
 			plt.show()
@@ -48,22 +47,28 @@ def main(argv):
 			X_train, X_test, Y_train, Y_test = db.get_data(train=train)
 			epochs = 10000
 			BS = 8
+			lr = 0.001
 			NN = Model()
 
 			model = NN.Input(10, input_shape=X_train.shape[1], activation='ReLu')
 			model = NN.Dense(10, 5, model, activation='ReLu')
 			model = NN.Output(5, 1, model, activation='Linear')
 
+			#compile model
+			NN.Compile(optimizer='SGD', loss='MSE', metrics='accuracy', lr=lr, 
+					   momentum=True)
+
+
 			#train the model
-			model, loss, accuracy = NN.Train(model, X_train, Y_train, 
-				loss='MSE', opt='SGD', epochs=epochs, batch=BS, categoric=False, lr=0.0001)	
+			model, losses, accuracy = NN.Train(model, X_train, Y_train, 
+				epochs=epochs, batch=BS, categoric=False)	
 
 			#evaluate the network
 			precision = NN.Evaluate(model, X_test, Y_test, False)
 
 			import matplotlib.pyplot as plt
 			plt.plot(range(epochs), accuracy, label='accuracy')
-			plt.plot(range(epochs), loss, label='loss')
+			plt.plot(range(epochs), losses, label='loss')
 			plt.title('Trainning results')
 			plt.legend()
 			plt.show()

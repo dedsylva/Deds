@@ -62,14 +62,18 @@ python -m unittest tests/tests_deds.py
 ```
 
 ### Todo
-* Implement Dense 
- * Implement forward/backward pass -- done
- * Implement SGD Optimizer -- done
- * Implement Momentum -- done
- * Implement L1 Regularization -- done
- * Implement L2 Regularization -- done
- * Implement Dropout
- * Implement Adam optimizer -- done
+* Dense 
+    * Implement forward/backward pass [x]
+    * Implement SGD Optimizer [x]
+    * Implement Momentum [x]
+    * Implement L1 Regularization [x]
+    * Implement L2 Regularization [x]
+    * Implement Dropout -- failing
+    * Implement Adam optimizer [x]
 * Implement gradcheck (numeric finite difference gradient calc)
-* Implement convolutions
-* Implement LSTM
+* Convolutions
+* RNN 
+    * Implement Vanilla RNN [] 
+    * Implement LSTM []
+* Wrap Models into Sequential Class 
+* Implement Functional Class 

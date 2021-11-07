@@ -1,7 +1,7 @@
 import numpy as np
 import unittest
-from model import Model
-from database import Wheat, MNIST
+from deds.model import Model
+from deds.database import Wheat, MNIST
 
 class TestMNIST(unittest.TestCase):
 	def test_dataset(self):
@@ -16,14 +16,21 @@ class TestMNIST(unittest.TestCase):
 
 		NN = Model()
 		epochs = 20
+		lr = 0.001
+		gamma = 0.95
 		BS = 128
 		model = NN.Input(128, input_shape=X_train.shape[1], activation='ReLu')		
 		model = NN.Dense(128, 100, model, activation='ReLu')
 		model = NN.Output(100, 10, model, activation='Softmax')
 
+		#compile model
+		NN.Compile(optimizer='SGD', loss='MSE', metrics='accuracy', lr=lr, 
+					momentum=True, gamma=gamma)
+
+
 		#train the model
 		model, loss, accuracy = NN.Train(model, X_train, Y_train, 
-				loss='MSE', opt='SGD', epochs=epochs, batch=BS, categoric=True, lr=0.001)
+				epochs=epochs, batch=BS, categoric=True)
 
 		self.assertEqual(len(loss), epochs)
 		self.assertEqual(len(accuracy), epochs)
@@ -49,16 +56,21 @@ class TestWheat(unittest.TestCase):
 
 		NN = Model()
 		epochs = 20
+		lr = 0.001
 		BS = 8
 
 		model = NN.Input(10, input_shape=X_train.shape[1], activation='ReLu')
 		model = NN.Dense(10, 5, model, activation='ReLu')
 		model = NN.Output(5, 1, model, activation='Linear')
 
+		#compile model
+		NN.Compile(optimizer='SGD', loss='MSE', metrics='accuracy', lr=lr, 
+					momentum=True)
+
 
 		#train the model
 		model, loss, accuracy = NN.Train(model, X_train, Y_train, 
-			loss='MSE', opt='SGD', epochs=epochs, batch=BS, categoric=False)	
+			epochs=epochs, batch=BS, categoric=False)	
 
 
 		self.assertEqual(len(loss), epochs)
