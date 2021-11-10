@@ -59,9 +59,6 @@ def lossFun(inputs, targets, hprev):
         np.clip(dparam, -5, 5, out=dparam)
 
 
-    print('weights')
-    print(dWhy)#, dWhh, dWxh)
-
     return loss, dWxh, dWhh, dWhy, dbh, dby, hs[len(inputs)-1]
 
 
@@ -91,7 +88,7 @@ def sample(h, seed_ix, n):
     print('----\n {} \n----'.format(txt))
 
 #source = 'harry_potter.txt'
-source = 'kafka.txt'
+source = 'deds/datasets/kafka.txt'
 data = open(source, 'r', encoding='UTF-8').read()
 chars = list(set(data))
 data_size, vocab_size = len(data), len(chars)

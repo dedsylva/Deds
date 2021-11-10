@@ -22,7 +22,7 @@ def softmax(x):
     return np.exp(x-max_)/sum(np.exp(x-max_))
 
 #source = 'harry_potter.txt'
-source = 'kafka.txt'
+source = 'deds/datasets/kafka.txt'
 data = open(source, 'r', encoding='UTF-8').read()
 chars = list(set(data)) #set filters unique characters already
 data_size, vocab_size = len(data), len(chars)
@@ -111,7 +111,7 @@ while n<= ITERATIONS:
     #gradients
     dWxh = np.zeros_like(Wxh)
     #dbh = np.zeros_like(bh)
-    dWhh = np.zeros_like(Wxh)
+    dWhh = np.zeros_like(Whh)
     dWhy = np.zeros_like(Why)
     #dby = np.zeros_like(by)
     hnext = np.zeros((hidden_size, vocab_size))
@@ -127,7 +127,7 @@ while n<= ITERATIONS:
         #input -> hidden layer
         dc_da = np.dot(dc_dz_o.T, Why).T
         da_dw = np.dot(dtanh(z_1[t]),x[t].T) + dtanh(z_1[t])*np.dot(Whh, hnext)
-        dWxh = dc_da*da_dw
+        dWxh += dc_da*da_dw
         #dbh = dc_da *dtanh(z_1[t]) 
 
         hnext += da_dw #time update
@@ -135,7 +135,7 @@ while n<= ITERATIONS:
         #hidden -> hidden layer
         dc_dz = np.dot(dc_dz_o.T, Why).T* dtanh(z_1[t])
         dz_dw = a_1[t-1].T if t!=0 else np.zeros_like(a_1[0]).T
-        dWhh = np.dot(dc_dz, dz_dw)
+        dWhh += np.dot(dc_dz, dz_dw)
 
         #exploding gradients solution
         for dparam in [dWxh, dWhh, dWhy]:#, dbh, dby]:

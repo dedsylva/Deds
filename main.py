@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 import sys
-from deds.model import Model
+from deds.model import Dense 
 from deds.database import Wheat, MNIST
 
 def main(argv):
@@ -11,15 +11,15 @@ def main(argv):
     if data[0][1] == 'MNIST':
       db = MNIST()
       X_train, X_test, Y_train, Y_test = db.get_data()
-      epochs = 80
+      epochs = 100 
       BS = 128
       lr = 0.001
       gamma = 0.95
 
-      NN = Model()
+      NN = Dense()
 
       model = NN.Input(128, input_shape=X_train.shape[1], activation='ReLu')
-      model = NN.Dense(128, 70, model, activation='ReLu')#, regularization='l2', reg=0.0001)
+      model = NN.Linear(128, 70, model, activation='ReLu')#, regularization='l2', reg=0.0001)
       model = NN.Dropout(model, p=0.5)
       model = NN.Output(70, 10, model, activation='Softmax')
 
@@ -48,10 +48,10 @@ def main(argv):
       epochs = 10000
       BS = 8
       lr = 0.001
-      NN = Model()
+      NN = Dense()
 
       model = NN.Input(10, input_shape=X_train.shape[1], activation='ReLu')
-      model = NN.Dense(10, 5, model, activation='ReLu')
+      model = NN.Linear(10, 5, model, activation='ReLu')
       model = NN.Output(5, 1, model, activation='Linear')
 
       #compile model

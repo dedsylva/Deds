@@ -1,6 +1,6 @@
 import numpy as np
 import unittest
-from deds.model import Model
+from deds.model import Dense 
 from deds.database import Wheat, MNIST
 
 class TestMNIST(unittest.TestCase):
@@ -14,13 +14,13 @@ class TestMNIST(unittest.TestCase):
         db = MNIST()
         X_train, X_test, Y_train, Y_test = db.get_data()
 
-        NN = Model()
+        NN = Dense()
         epochs = 20
         lr = 0.001
         gamma = 0.95
         BS = 128
         model = NN.Input(128, input_shape=X_train.shape[1], activation='ReLu')      
-        model = NN.Dense(128, 100, model, activation='ReLu')
+        model = NN.Linear(128, 100, model, activation='ReLu')
         model = NN.Output(100, 10, model, activation='Softmax')
 
         #compile model
@@ -54,13 +54,13 @@ class TestWheat(unittest.TestCase):
         db = Wheat()
         X_train, X_test, Y_train, Y_test = db.get_data(train=0.9)
 
-        NN = Model()
+        NN = Dense()
         epochs = 20
         lr = 0.001
         BS = 8
 
         model = NN.Input(10, input_shape=X_train.shape[1], activation='ReLu')
-        model = NN.Dense(10, 5, model, activation='ReLu')
+        model = NN.Linear(10, 5, model, activation='ReLu')
         model = NN.Output(5, 1, model, activation='Linear')
 
         #compile model

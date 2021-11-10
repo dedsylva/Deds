@@ -19,11 +19,11 @@ Or just modify using <b>main.py</b>
 ```python
 # input_shape must have (batch, features, 1)
 # unlike keras that goes (batch, features, )
-from model import Model
-NN = Model()
+from model import Dense 
+NN = Dense()
 
 model = NN.Input(128, input_shape=X_train.shape[1], activation='ReLu')
-model = NN.Dense(128, 70, model, activation='ReLu', regularization='l2', reg=0.00001) #a little low, I know 
+model = NN.Linear(128, 70, model, activation='ReLu', regularization='l2', reg=0.00001) #a little low, I know 
 model = NN.Output(70, 10, model, activation='Softmax', regularization='l1', reg=0.0001)
 
 NN.Compile(optimizer='SGD', loss='MSE', metrics='accuracy', lr=lr, gamma=gamma)
