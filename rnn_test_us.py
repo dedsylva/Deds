@@ -97,23 +97,14 @@ while n<= ITERATIONS:
         a_2[t] = softmax(np.dot(Why, a_1[t]))#+ by)
         #a_2[t] = softmax(z_2[t])
 
-        #loss computation
-        #loss -= np.log(a_2[t][outputs[t], 0])
         loss += -(np.log(a_2[t][outputs[t],0])) #a bit weird loss
-        #loss -= (y[t]*np.log(a_2[t])).mean() #categorical cross entropy
-        #loss -= (a_2[t]*np.log(a_2[t])).mean() #categorical cross entropy
-
-
-    #loss /= len(inputs)
-    #smooth_loss = smooth_loss * 0.999 + loss * 0.001
-    #all_loss.append(smooth_loss)
 
     #gradients
     dWxh = np.zeros_like(Wxh)
-    #dbh = np.zeros_like(bh)
+    dbh = np.zeros_like(bh)
     dWhh = np.zeros_like(Whh)
     dWhy = np.zeros_like(Why)
-    #dby = np.zeros_like(by)
+    dby = np.zeros_like(by)
     hnext = np.zeros((hidden_size, vocab_size))
 
     #backward pass
@@ -171,28 +162,9 @@ while n<= ITERATIONS:
 
 
     #optimizing parameters
-
-    #for param, dparam, mem in zip([Wxh, Whh, Why, bh, by],
-    #   [dWxh, dWhh, dWhy, dbh, dby],
-    #   [mWxh, mWhh, mWhy, mbh, mby]):
-
     for param, dparam, mem in zip([Wxh, Whh, Why],
         [dWxh, dWhh, dWhy],
         [mWxh, mWhh, mWhy]):
-#       
-#
-#       t = 0
-#       m = [np.zeros_like(param[i]) for i in range(len(param))]
-#       v = [np.zeros_like(param[i]) for i in range(len(param))]        
-#       for i in range(len(m)):
-#           t+=1
-#           m[i] = b1 * m[i] + (1 - b1) * dparam[i] #estimates 1st momentum (mean) of gradient 
-#           v[i] = b2 * v[i] + (1 - b2) * np.square(dparam[i]) #estimates 2nd momentum (variance) of gradient 
-#           mhat = m[i] / (1. - b1**t) #corrects bias towards zero (initially set to vector of 0s, creates bias around it)
-#           vhat = v[i] / (1. - b2**t)
-#
-#           param[i] -= lr*mhat / (np.sqrt(vhat) + eps) #updating params
-#           
 
         mem += dparam * dparam
         param += -lr * dparam / np.sqrt(mem + 1e-8) # adagrad update
@@ -200,7 +172,6 @@ while n<= ITERATIONS:
 
     p += seq_length # move data pointer
     n += 1      
-
 
 
 import matplotlib.pyplot as plt

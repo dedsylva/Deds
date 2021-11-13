@@ -283,7 +283,7 @@ class RNN:
   def __init__(self):
     pass
 
-  def forward(self, layer, x, time_steps):
+  def forward(self, layer, x):
     # W -- weight nxm matrix of for the next layer
     # x -- input vector of shape (m,1)
     # b -- bias vector of shape (n,1)
@@ -294,10 +294,10 @@ class RNN:
 
     # TODO: Incorporate Dropout
     _type = layer[5]
-    res = np.zeros((time_steps,))
+    res = np.zeros((self.time_step,))
 
     if _type in (Types.Input, Types.Linear, Types.Output, Types.RNN):
-      for t in range(time_steps):
+      for t in range(self.time_step):
         W[t] = layer[0]
         b[t] = layer[1]
         actv = layer[2]
@@ -306,8 +306,8 @@ class RNN:
       return [x, res, act(res)]
 
     if _type == Types.RNN:
-      res = np.zeros((time_steps,))
-      for t in range(time_steps):
+      res = np.zeros((self.time_step,))
+      for t in range(self.time_step):
         W[t] = layer[0]
         b[t] = layer[1]
         actv = layer[2]
@@ -319,7 +319,7 @@ class RNN:
       raise ValueError(f' {_type} is an Incorrect type of Layer')
 
 
-  def backward(self, A, model, y, loss, _type, next_model, all_loss, time_steps):
+  def backward(self, A, model, y, loss, _type, next_model, all_loss):
 
     # TODO: Implement Dropout! The comment part below is from that
     W_t1 = next_model[0] 
@@ -333,7 +333,7 @@ class RNN:
     if _type == Types.Output:
       all_lost = list()
 
-      for t in range(time_steps):
+      for t in range(self.time_step):
         # dc_dw
         dc_dz_o = (a[t] - y[t]) # TODO: mudar para d_loss 
         dc_dw_o += np.dot(dc_dz_o, a_t0[t].T)/len(y)
@@ -347,7 +347,7 @@ class RNN:
       Whh = model[6] 
       dc_dwhh = np.zeros_like(Whh)
 
-      for t in range(time_steps):
+      for t in range(self.time_step):
         # Compute hidden state
         hnext = np.zeros((Whh.shape[0], W_t1.shape))
 
@@ -371,7 +371,7 @@ class RNN:
 
 
     else:
-      for t in range(time_steps):
+      for t in range(self.time_step):
         # dc_dw
         dc_dz_t1 = all_loss[0]
         dc_dz = np.dot( all_loss[0].T, W_t1).T * d_act_(a[t])
@@ -413,18 +413,27 @@ class RNN:
     model.append([weights, bias, activation, reg, reg_num, Types('Linear')])
     return model
 
-  def RNN(self, pr_neurons, next_neurons, hidden_neurons, model, timesteps, reg=None, reg_num=0):
+  def RNN(self, pr_neurons, next_neurons, hidden_neurons, model, seq_length, reg=None, reg_num=0):
     np.random.seed(23)
+    self.hidden_size = hidden_neurons
+    self.vocab_size = pr_neurons
     weights = np.random.rand(next_neurons, pr_neurons) - 0.5
     hidden_state = np.random.rand(hidden_neurons, hidden_neurons) - 0.5
     bias = np.random.rand(next_neurons, 1) - 0.5
-    model.append([weights, bias, 'tanh', reg, reg_num, Types('RNN'), timesteps])
-    return model
+    self.seq_length = seq_length
 
-  def Compile(self, optimizer, loss, metrics, lr= 0.001, momentum=True, gamma=0.95):
+    if model == None:
+      return [([weights, bias, 'tanh', reg, reg_num, Types('RNN'), seq_length])]
+
+    else:
+      model.append([weights, bias, 'tanh', reg, reg_num, Types('RNN'), seq_length])
+      return model
+
+  def Compile(self, optimizer, loss, metrics, time_step, lr= 0.001, momentum=True, gamma=0.95):
     self.optimizer = optimizer
     self.loss = loss
     self.lr = lr
+    self.time_step = time_step
 
     #optimizer with momentum
     if momentum:
@@ -436,7 +445,99 @@ class RNN:
       self.momentum = False
       self.gamma = 0
 
-  def Train(self, model, x, y, epochs, batch, categoric):
+  def Train(self, model, data, char_to_ix, ix_to_char, epochs=100000, batch=32):
+
+    #Training (trying to predict next character)
+    n,p = 0,0
+
+    #ADAMGRAD
+    mWxh = np.zeros((self.hidden_size, self.vocab_size))
+    mWhh = np.zeros((self.hidden_size, self.hidden_size))
+    mWhy = np.zeros((self.vocab_size, 1))
+    mbh = np.zeros((self.hidden_size, 1))
+    mby = np.zeros((self.vocab_size,1)) 
+
+    all_loss = []
+    hprev = np.zeros((self.hidden_size, 1))
+
+    while n<= epochs:
+        #when we finish the training data
+        if p+self.seq_length+1 >= len(data) or n == 0:
+            hprev = np.zeros((self.hidden_size, 1)) #FOR FORWARD PASS AT SAMPLE FUNCTION!!
+            p = 0 #start again the training data
+        
+        #vetores de indices
+        inputs = [char_to_ix[ch] for ch in data[p:p+self.seq_length]]
+        outputs = [char_to_ix[ch] for ch in data[p+1:p+self.seq_length+1]]
+
+        #initializing vectors
+        m = len(inputs)
+        x, y = np.zeros((m, self.vocab_size,1)), np.zeros((m, self.vocab_size,1))
+        z_1, a_1 = np.zeros((m, self.hidden_size,1)), np.zeros((m, self.hidden_size,1))
+        #z_2, a_2 = np.zeros((m, vocab_size,1)), np.zeros((m, vocab_size,1))
+        a_2 = np.zeros((m, self.vocab_size,1))
+        a_1[-1] = np.copy(hprev) #copying the last state of the network in previou iteration
+
+        loss = 0
+        
+        #forward pass
+
+        loss += -(np.log(a_2[t][outputs[t],0])) #a bit weird loss
+
+        #gradients
+        dWxh = np.zeros_like(Wxh)
+        dbh = np.zeros_like(bh)
+        dWhh = np.zeros_like(Whh)
+        dWhy = np.zeros_like(Why)
+        dby = np.zeros_like(by)
+        hnext = np.zeros((self.hidden_size, self.vocab_size))
+
+        # backward
+
+        # att hprev
+        hprev = a_1[-1]
+
+        #sample from model to see the performance (just for showing off)
+        if n % 1000 == 0:
+            print(f'epoch: {n}, loss: {loss}') 
+
+            #generate 200 characters to see how the network is
+            x = np.zeros((self.vocab_size,1))
+            x[inputs[0]] = 1
+            indexes = []
+            h = hprev
+            for t in range(200):
+                h = tanh(np.dot(Wxh, x) + np.dot(Whh, h))# + bh)
+                predict = softmax(np.dot(Why, h))# + by)
+
+                ix = np.random.choice(range(self.vocab_size), p=predict.ravel())
+
+                #saving the predicted character 
+                x = np.zeros((self.vocab_size,1))
+                x[ix] = 1
+
+                indexes.append(ix)
+
+            txt = ''.join(ix_to_char[ix] for ix in indexes)
+            print('----\n {} \n----'.format(txt))
+
+
+
+        #optimizing parameters
+        for param, dparam, mem in zip([Wxh, Whh, Why],
+            [dWxh, dWhh, dWhy],
+            [mWxh, mWhh, mWhy]):
+
+            mem += dparam * dparam
+            param += -lr * dparam / np.sqrt(mem + 1e-8) # adagrad update
+
+
+        p += self.seq_length # move data pointer
+        n += 1      
+
+
+
+
     l = []
     ac = []
     loss_ = getattr(losses, self.loss)

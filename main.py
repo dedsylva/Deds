@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 import sys
-from deds.model import Dense 
+from deds.model import Dense, RNN 
 from deds.database import Wheat, MNIST
 
 def main(argv):
@@ -72,6 +72,45 @@ def main(argv):
       plt.title('Trainning results')
       plt.legend()
       plt.show()
+
+    elif data[0][1] == 'RNN':
+
+      # source = 'harry_potter.txt'
+      source = 'deds/datasets/kafka.txt'
+      data = open(source, 'r', encoding='UTF-8').read()
+      chars = list(set(data)) #set filters unique characters already
+      data_size, vocab_size = len(data), len(chars)
+
+      #X_train, X_test, Y_train, Y_test = db.get_data(train=train)
+
+      # hot encoding (sparse, but just a example, should use word embedding)
+      char_to_ix = { ch:i for i,ch in enumerate(chars)}
+      ix_to_char = { i:ch for i,ch in enumerate(chars)}
+
+
+      # hyperparameters
+      epochs = 10000
+      BS = 8
+      lr = 0.01
+      hidden_size = 100
+      time_step = 25 #25 chars generated every timestep
+      seq_length = 25 #
+      NN = RNN()
+
+      #model = NN.Input(hidden_size, input_shape=(vocab_size,), activation='ReLu')
+      model = NN.RNN(vocab_size, 1, hidden_size, None, seq_length=seq_length)
+      model = NN.Output(vocab_size, 1, model, activation='Linear')
+
+      #compile model
+      NN.Compile(optimizer='SGD', loss='MSE', metrics='accuracy', 
+                 time_step=time_step, lr=lr, momentum=False)
+
+
+      #train the model
+      model, losses, accuracy = NN.Train(model, data, 
+        char_to_ix, ix_to_char, epochs=epochs, batch=BS) 
+
+
 
     else:
       raise Exception ('The Model you entered are not available')
