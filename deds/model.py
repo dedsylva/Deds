@@ -283,9 +283,9 @@ class RNN:
     pass
 
   def forward(self, model, x, y, inputs, outputs, m):
-
     A = list()
-    loss = 0
+    self.avg_loss = 0
+    hidden = np.zeros((m, self.vocab_size))
 
     for t in range(m):
       x[t][inputs] = 1
@@ -294,88 +294,107 @@ class RNN:
 
       for j in range(len(model)):
         _type = model[j][5]
+        act = getattr(activation, model[j][2])
 
-        if _type not in (Types.Input, Types.Linear, Types.Output, Types.RNN):
-          raise TypeError(f'Incorrect type. Got {_type}, but we only support Input, Linear, RNN, Output')
+        assert _type in (Types.Input, Types.Linear, Types.Output, Types.RNN), f'Incorrect type. Got {_type}, but we only support Input, Linear, RNN, Output'
 
         if j == 0:
-          act = getattr(activation, model[j][2])
-          w = np.dot(model[j][0],x[t].reshape(-1,1)) + model[j][1]
-          A.append([x[t], w, act(w)])
-        
+          z = np.dot(model[j][0],x[t].reshape(-1,1)) + model[j][1]
+
+          A.append([x[t].reshape(-1,1), z, act(z)])
+       
         else:
-          act = getattr(activation, model[j][2])
-          w = np.dot(model[j][0],A[-1][2]) + model[j][1]
-          A.append([x[t], w, act(w)])
- 
+          
+          if _type == Types.RNN:
+            assert act == activation.Tanh
+
+            hidden += np.dot(model[j][6], hidden)
+            z = np.dot(model[j][0],A[-1][2]) + hidden + model[j][1] 
+            A.append([A[-1][2], z, act(z)])
+
+          else:
+            z = np.dot(model[j][0],A[-1][2]) + model[j][1] 
+            A.append([A[-1][2], z, act(z)])
+
+
       # compute loss
-      loss += -(np.log(A[-1][2][outputs[t],0])) #a bit weird loss
+      self.avg_loss += -(np.log(A[-1][2][outputs[t],0])) #a bit weird loss
 
-      return A
-
-
-  def backward(self, A, layer, y, loss, _type, next_model, back):
-
-    # TODO: Implement Dropout! The comment part below is from that
-    W_t1 = next_model[0] 
-    a_t0 = A[0] # previous activation
-    z = A[1]
-    a = A[2]
-    actv = layer[2]
-    d_loss_ = getattr(losses, 'd'+loss)
-    d_act_ = getattr(activation, 'd'+actv)
-
-    if _type == Types.Output:
-
-      for t in range(self.time_step):
-        # dc_dw
-        dc_dz_o = (a[t] - y[t]) # TODO: mudar para d_loss 
-        dc_dw_o += np.dot(dc_dz_o, a_t0[t].T)/len(y)
-
-        # dc_db
-        dc_db_o += dc_dz_o/len(y)
-
-      return [dc_dz_o, dc_dw_o, dc_db_o]
-
-    elif _type == Types.RNN:
-      Whh = layer[6] 
-      dc_dwhh = np.zeros_like(Whh)
-
-      for t in range(self.time_step):
-        # Compute hidden state
-        hnext = np.zeros((Whh.shape[0], W_t1.shape))
-
-        # dc_dw
-        dc_da = np.dot(back[0].T, W_t1).T
-        da_dw = np.dot(d_act_(z[t]), a_t0[t].T) + d_act_(z[t])* np.dot(Whh, hnext)
-        dc_dw += dc_da*da_dw
-
-        # dc_db
-        dc_db += dc_da * d_actz(z[t]) 
- 
-        # update param of hidden state
-        hnext += da_dw
-
-        # dc_dwhh
-        dc_dz = np.dot(back[0].T, W_t1).T * d_act_(z[t])
-        dz_dw = a[t-1].T if t!=0 else np.zeros_like(a[0]).T
-        dc_dwhh += np.dot(dc_dz, dz_dw)
-
-      return [dc_dz, dc_dw,dc_db, dc_dwhh]
+    return A
 
 
-    else:
-      for t in range(self.time_step):
-        # dc_dw
-        dc_dz_t1 = back[0]
-        dc_dz = np.dot( back[0].T, W_t1).T * d_act_(a[t])
-        dc_dw += np.dot(dc_dz, a_t0[t].T)/len(y)
+  def backward(self, A, model, y, m):
 
-        # dc_db
-        dc_db += dc_dz/len(y)
+    back = list()
+    gradients = list()
+    dz_dw = np.zeros_like(A[0][2][0]).T # TODO: don't know if this is correct
 
-      return [dc_dz, dc_dw,dc_db]
+    for j in range(len(model)):
+      if model[j][5] == Types.RNN:
+        # weights of layer, bias , weight of cell
+        gradients.append([np.zeros_like(model[j][0]), np.zeros_like(model[j][1]) , np.zeros_like(model[j][6])])
+      else:
+        # weight of layer, bias
+        gradients.append([np.zeros_like(model[j][0]), np.zeros_like(model[j][1])])
 
+    i = len(A) - 1
+    for t in reversed(range(m)):
+
+      for j in reversed(range(len(model))):
+        d_loss_ = getattr(losses, 'd'+self.loss)
+        d_act_ = getattr(activation, 'd'+model[j][2])
+        _type = model[j][5]
+        a_t0 = A[i][0] # previous activation
+        z = A[i][1]
+        a = A[i][2]
+
+
+        if _type == Types.Output:
+
+          # dc_dw
+          dc_dz_o = (A[i][2] - y[t].reshape(-1,1)) # TODO: mudar para d_loss 
+          gradients[j][0] += np.dot(dc_dz_o, A[i][0].T)/len(y[t])
+
+          # dc_db
+          gradients[j][1] += dc_dz_o/len(y[t])
+
+
+        elif _type == Types.RNN:
+          W_t1 = model[j+1][0] # weight of next layer
+          Whh = model[j][6] 
+          hnext = np.zeros((Whh.shape[0], W_t1.shape[0])) # TODO: maybe one for each RNN layer?
+
+          # dc_dw
+          dc_da = np.dot(dc_dz_o.T, model[j+1][0]).T
+          da_dw = np.dot(d_act_(A[i][1]), A[i][0].T) + d_act_(A[i][1])* np.dot(Whh, hnext)
+          gradients[j][0] += dc_da*da_dw
+
+          # dc_db
+          gradients[j][1] += dc_da * d_act_(A[i][1]) 
+   
+          # update param of hidden state
+          hnext += da_dw
+
+          # dc_dwhh
+          dc_dz = np.dot(dc_dz_o.T, model[j+1][0]).T * d_act_(A[i][1])
+          dz_dw = A[i][2][t-1].T # TODO: check this 
+          gradients[j][2] += np.dot(dc_dz, dz_dw)
+
+
+        else:
+          W_t1 = model[j+1][0] # weight of next layer
+
+          # dc_dw
+          dc_dz_t1 = dc_dz 
+          dc_dz = np.dot(dc_dz.T, W_t1).T * d_act_(A[i][2])
+          gradients[j][0] += np.dot(dc_dz, A[i][0].T)/len(y)
+
+          # dc_db
+          gradients[j][1] += dc_dz/len(y)
+
+        i -= 1
+
+    return gradients
 
   def summary(self, model):
     print(f'| Total Number of Layers: {len(model)} |')
@@ -389,21 +408,21 @@ class RNN:
   def Input(self, neurons, input_shape, activation, reg=None, reg_num=0):
     #random weights and bias between -0.5 to 0.5
     np.random.seed(23)
-    weights = np.random.rand(neurons, input_shape) - 0.5
-    bias = np.random.rand(neurons,1) - 0.5
+    weights = np.random.randn(neurons, input_shape) * 0.01
+    bias = np.random.randn(neurons,1) * 0.01
     return [[weights, bias, activation, Regs(reg), reg_num, Types('Input')]]
 
   def Output(self, pr_neurons, next_neurons, model, activation, reg=None, reg_num=0):
     np.random.seed(23)
-    weights = np.random.rand(next_neurons, pr_neurons) - 0.5
-    bias = np.random.rand(next_neurons,1) - 0.5
+    weights = np.random.randn(next_neurons, pr_neurons) * 0.01 
+    bias = np.random.randn(next_neurons,1) * 0.01 
     model.append([weights, bias, activation, Regs(reg), reg_num, Types('Output')])
     return model
 
   def Linear(self, pr_neurons, next_neurons, model, activation, reg=None, reg_num=0):
     np.random.seed(23)
-    weights = np.random.rand(next_neurons, pr_neurons) - 0.5
-    bias = np.random.rand(next_neurons,1) - 0.5
+    weights = np.random.randn(next_neurons, pr_neurons) * 0.01 
+    bias = np.random.randn(next_neurons,1) * 0.01 
     model.append([weights, bias, activation, reg, reg_num, Types('Linear')])
     return model
 
@@ -411,16 +430,16 @@ class RNN:
     np.random.seed(23)
     self.hidden_size = hidden_neurons
     self.vocab_size = pr_neurons
-    weights = np.random.rand(next_neurons, pr_neurons) - 0.5
-    hidden_state = np.random.rand(hidden_neurons, hidden_neurons) - 0.5
-    bias = np.random.rand(next_neurons,1) - 0.5
+    weights = np.random.randn(next_neurons, pr_neurons) * 0.01 
+    hidden_state = np.random.randn(hidden_neurons, hidden_neurons) * 0.01 
+    bias = np.random.randn(next_neurons,1) * 0.01 
     self.seq_length = seq_length
 
     if model == None:
-      return [([weights, bias, 'Tanh', reg, reg_num, Types('RNN'), seq_length])]
-
+      model = [([weights, bias, 'Tanh', reg, reg_num, Types('RNN'), hidden_state, seq_length])]
+      return model 
     else:
-      model.append([weights, bias, 'Tanh', reg, reg_num, Types('RNN'), seq_length])
+      model.append([weights, bias, 'Tanh', reg, reg_num, Types('RNN'), hidden_state, seq_length])
       return model
 
   def Compile(self, optimizer, loss, metrics, time_step, lr= 0.001, momentum=True, gamma=0.95):
@@ -451,7 +470,6 @@ class RNN:
     mbh = np.zeros((self.hidden_size, 1))
     mby = np.zeros((self.vocab_size,1)) 
 
-    back = []
     hprev = np.zeros((self.hidden_size, 1))
 
     while n<= epochs:
@@ -467,43 +485,32 @@ class RNN:
         #initializing vectors
         m = len(inputs)
         x, y = np.zeros((m, self.vocab_size,)), np.zeros((m, self.vocab_size,))
-        #z_1, a_1 = np.zeros((m, self.hidden_size,1)), np.zeros((m, self.hidden_size,1))
-        #z_2, a_2 = np.zeros((m, vocab_size,1)), np.zeros((m, vocab_size,1))
-        #a_2 = np.zeros((m, self.vocab_size,1))
-        #a_1[-1] = np.copy(hprev) #copying the last state of the network in previou iteration
-
-        loss = 0
         
         #forward
         A = self.forward(model, x, y, inputs, outputs, m)
         print('Success Forward!')
-        return
 
         #gradients
-        dWxh = np.zeros_like(Wxh)
-        dbh = np.zeros_like(bh)
-        dWhh = np.zeros_like(Whh)
-        dWhy = np.zeros_like(Why)
-        dby = np.zeros_like(by)
-        hnext = np.zeros((self.hidden_size, self.vocab_size))
+        #dWxh = np.zeros_like(Wxh)
+        #dbh = np.zeros_like(bh)
+        #dWhh = np.zeros_like(Whh)
+        #dWhy = np.zeros_like(Why)
+        #dby = np.zeros_like(by)
+        #hnext = np.zeros((self.hidden_size, self.vocab_size))
 
         # backward
-          
-        #backward pass
-        back = np.zeros((m,3))
-        for j in range(len(model)):
-          if j == 0:
-            back[t] = self.backward(A[-1-t], model[-1-j], y[k], self.loss, model[-1-j][5], model[-j], [0,0,0])
-          else:
-            back[t] = self.backward(A[-1-t], model[-1-j], y[k], self.loss, model[-1-j][5], model[-j], back[t-1])
+        back = self.backward(A, model, y, m)
+        print('Success Backward!')
 
+        print(f'epoch: {n}, loss: {self.avg_loss}') 
+        return
 
         # att hprev
         hprev = a_1[-1]
 
         #sample from model to see the performance (just for showing off)
         if n % 1000 == 0:
-            print(f'epoch: {n}, loss: {loss}') 
+            print(f'epoch: {n}, loss: {self.avg_loss}') 
 
             #generate 200 characters to see how the network is
             x = np.zeros((self.vocab_size,1))

@@ -42,6 +42,7 @@ lr = 1e-1
 
 
 #model
+np.random.seed(23)
 Wxh = np.random.randn(hidden_size, vocab_size) * 0.01 #input -> hidden
 bh =  np.zeros((hidden_size, 1)) #hidden bias
 
@@ -87,18 +88,21 @@ while n<= ITERATIONS:
     
 
     #forward pass
-    for t in range(len(inputs)):
-
+    #for t in range(len(inputs)):
+    for t in range(5):
         x[t][inputs[t]] = 1
         y[t][outputs[t]] = 1
 
         z_1[t] = np.dot(Wxh, x[t]) + np.dot(Whh, a_1[t-1])# + bh
-        print(z_1[t].shape)
         a_1[t] = tanh(z_1[t])
         a_2[t] = softmax(np.dot(Why, a_1[t]))#+ by)
+        z_2 = np.dot(Why, a_1[t])
         #a_2[t] = softmax(z_2[t])
 
         loss += -(np.log(a_2[t][outputs[t],0])) #a bit weird loss
+        print('got here')
+        print(a_2[t][outputs[t],0], -(np.log(a_2[t][outputs[t],0])))
+    exit(0)
 
     #gradients
     dWxh = np.zeros_like(Wxh)
@@ -114,7 +118,6 @@ while n<= ITERATIONS:
         dc_dz_o = (a_2[t] - y[t])/len(y[t])
         dWhy += np.dot(dc_dz_o,a_1[t].T)#/len(y[t])
         #dby += dc_dz_o
-
 
         #input -> hidden layer
         dc_da = np.dot(dc_dz_o.T, Why).T
