@@ -75,7 +75,7 @@ class Dense:
       raise ValueError(f' {_type} is an Incorrect type of Layer')
 
 
-  def backward(self, A, actv, y, loss, _type, next_model, all_loss):
+  def backward(self, A, actv, y, loss, _type, next_model, back):
     # we do backpropagation
     # Output layer:
     # dc_dw_o = (dc_da_o)*(da_dz_o)*(dz_dw_o)
@@ -94,7 +94,6 @@ class Dense:
     d_act_ = getattr(activation, 'd'+actv)
 
     if _type == Types.Output:
-      all_lost = list()
       #dc_dw
       dc_dz_o = (a - y)
       dz_dw_o = a_t0.T #previous activation
@@ -106,7 +105,7 @@ class Dense:
 
     else:
       #dc_dw
-      dc_dz_t1 = all_loss[0]
+      dc_dz_t1 = back[0]
       dz_t1_da = W_t1
       da_dz = d_act_(a)
       dc_dz = np.dot((dc_dz_t1).T, dz_t1_da).T *da_dz
@@ -204,18 +203,18 @@ class Dense:
             A.append(self.forward(model[j], A[-1][2]))
 
         #backward pass
-        all_loss = list()
+        back = list()
         for j in range(len(model)):
           if j == 0:
-            all_loss.append(self.backward(A[-1-j], model[-1-j][2], y[k], self.loss, model[-1-j][5], model[-j], [0,0,0]))
+            back.append(self.backward(A[-1-j], model[-1-j][2], y[k], self.loss, model[-1-j][5], model[-j], [0,0,0]))
           else:
-            all_loss.append(self.backward(A[-1-j], model[-1-j][2], y[k], self.loss, model[-1-j][5], model[-j], all_loss[-1]))
+            back.append(self.backward(A[-1-j], model[-1-j][2], y[k], self.loss, model[-1-j][5], model[-j], back[-1]))
 
         reg = 0
         #weight regularization
-        reg_1 = [model[i][4]*abs(all_loss[i][1]).mean() for i in range(len(model)) if model[i][3] == Regs.L1]
+        reg_1 = [model[i][4]*abs(back[i][1]).mean() for i in range(len(model)) if model[i][3] == Regs.L1]
         reg_1 = np.mean(reg_1) if len(reg_1) > 0 else 0  
-        reg_2 = [model[i][4]*(all_loss[i][1]**2).mean() for i in range(len(model)) if model[i][3] == Regs.L2]
+        reg_2 = [model[i][4]*(back[i][1]**2).mean() for i in range(len(model)) if model[i][3] == Regs.L2]
         reg_2 = np.mean(reg_2) if len(reg_2) > 0 else 0  
         reg = reg_1 + reg_2
 
@@ -232,12 +231,12 @@ class Dense:
 
         if self.momentum:
           if count == 1:
-            gradients = [[self.lr*all_loss[j][1], self.lr*all_loss[j][2]] for j in range(len(model))]
+            gradients = [[self.lr*back[j][1], self.lr*back[j][2]] for j in range(len(model))]
           else:
-            gradients = [[self.gamma*gradients[j][0] + self.lr*all_loss[j][1],
-                    self.gamma*gradients[j][1] + self.lr*all_loss[j][2]] for j in range(len(model))]
+            gradients = [[self.gamma*gradients[j][0] + self.lr*back[j][1],
+                    self.gamma*gradients[j][1] + self.lr*back[j][2]] for j in range(len(model))]
         else:
-          gradients = all_loss
+          gradients =back 
         #update params
         if self.optimizer == 'SGD':                 
           model = opt_(model, gradients, self.momentum, self.lr) 
@@ -283,55 +282,50 @@ class RNN:
   def __init__(self):
     pass
 
-  def forward(self, layer, x):
-    # W -- weight nxm matrix of for the next layer
-    # x -- input vector of shape (m,1)
-    # b -- bias vector of shape (n,1)
-    # n -- number of output neurons (neurons of next layer)
-    # m -- number of input neurons (neurons in the previous layer)
-    # z[i] = W[i-1]x + b[i-1]
-    # a[i] = f(z[i]) -- f is the activation funciton
+  def forward(self, model, x, y, inputs, outputs, m):
 
-    # TODO: Incorporate Dropout
-    _type = layer[5]
-    res = np.zeros((self.time_step,))
+    A = list()
+    loss = 0
 
-    if _type in (Types.Input, Types.Linear, Types.Output, Types.RNN):
-      for t in range(self.time_step):
-        W[t] = layer[0]
-        b[t] = layer[1]
-        actv = layer[2]
-        act = getattr(activation, actv)
-        res[t] = np.dot(W[t],x[t]) + b[t]
-      return [x, res, act(res)]
-
-    if _type == Types.RNN:
-      res = np.zeros((self.time_step,))
-      for t in range(self.time_step):
-        W[t] = layer[0]
-        b[t] = layer[1]
-        actv = layer[2]
-        act = getattr(activation, actv)
-        res[t] = np.dot(W[t],x[t]) + np.dot(Wh[t], res[t-1]) + b[t]
-      return [x, res, act(res)]
-
-    else:
-      raise ValueError(f' {_type} is an Incorrect type of Layer')
+    for t in range(m):
+      x[t][inputs] = 1
+      y[t][outputs] = 1
 
 
-  def backward(self, A, model, y, loss, _type, next_model, all_loss):
+      for j in range(len(model)):
+        _type = model[j][5]
+
+        if _type not in (Types.Input, Types.Linear, Types.Output, Types.RNN):
+          raise TypeError(f'Incorrect type. Got {_type}, but we only support Input, Linear, RNN, Output')
+
+        if j == 0:
+          act = getattr(activation, model[j][2])
+          w = np.dot(model[j][0],x[t].reshape(-1,1)) + model[j][1]
+          A.append([x[t], w, act(w)])
+        
+        else:
+          act = getattr(activation, model[j][2])
+          w = np.dot(model[j][0],A[-1][2]) + model[j][1]
+          A.append([x[t], w, act(w)])
+ 
+      # compute loss
+      loss += -(np.log(A[-1][2][outputs[t],0])) #a bit weird loss
+
+      return A
+
+
+  def backward(self, A, layer, y, loss, _type, next_model, back):
 
     # TODO: Implement Dropout! The comment part below is from that
     W_t1 = next_model[0] 
     a_t0 = A[0] # previous activation
     z = A[1]
     a = A[2]
-    actv = model[2]
+    actv = layer[2]
     d_loss_ = getattr(losses, 'd'+loss)
     d_act_ = getattr(activation, 'd'+actv)
 
     if _type == Types.Output:
-      all_lost = list()
 
       for t in range(self.time_step):
         # dc_dw
@@ -344,7 +338,7 @@ class RNN:
       return [dc_dz_o, dc_dw_o, dc_db_o]
 
     elif _type == Types.RNN:
-      Whh = model[6] 
+      Whh = layer[6] 
       dc_dwhh = np.zeros_like(Whh)
 
       for t in range(self.time_step):
@@ -352,7 +346,7 @@ class RNN:
         hnext = np.zeros((Whh.shape[0], W_t1.shape))
 
         # dc_dw
-        dc_da = np.dot(all_loss[0].T, W_t1).T
+        dc_da = np.dot(back[0].T, W_t1).T
         da_dw = np.dot(d_act_(z[t]), a_t0[t].T) + d_act_(z[t])* np.dot(Whh, hnext)
         dc_dw += dc_da*da_dw
 
@@ -363,7 +357,7 @@ class RNN:
         hnext += da_dw
 
         # dc_dwhh
-        dc_dz = np.dot(all_loss[0].T, W_t1).T * d_act_(z[t])
+        dc_dz = np.dot(back[0].T, W_t1).T * d_act_(z[t])
         dz_dw = a[t-1].T if t!=0 else np.zeros_like(a[0]).T
         dc_dwhh += np.dot(dc_dz, dz_dw)
 
@@ -373,8 +367,8 @@ class RNN:
     else:
       for t in range(self.time_step):
         # dc_dw
-        dc_dz_t1 = all_loss[0]
-        dc_dz = np.dot( all_loss[0].T, W_t1).T * d_act_(a[t])
+        dc_dz_t1 = back[0]
+        dc_dz = np.dot( back[0].T, W_t1).T * d_act_(a[t])
         dc_dw += np.dot(dc_dz, a_t0[t].T)/len(y)
 
         # dc_db
@@ -396,20 +390,20 @@ class RNN:
     #random weights and bias between -0.5 to 0.5
     np.random.seed(23)
     weights = np.random.rand(neurons, input_shape) - 0.5
-    bias = np.random.rand(neurons, 1) - 0.5
+    bias = np.random.rand(neurons,1) - 0.5
     return [[weights, bias, activation, Regs(reg), reg_num, Types('Input')]]
 
   def Output(self, pr_neurons, next_neurons, model, activation, reg=None, reg_num=0):
     np.random.seed(23)
     weights = np.random.rand(next_neurons, pr_neurons) - 0.5
-    bias = np.random.rand(next_neurons, 1) - 0.5
+    bias = np.random.rand(next_neurons,1) - 0.5
     model.append([weights, bias, activation, Regs(reg), reg_num, Types('Output')])
     return model
 
   def Linear(self, pr_neurons, next_neurons, model, activation, reg=None, reg_num=0):
     np.random.seed(23)
     weights = np.random.rand(next_neurons, pr_neurons) - 0.5
-    bias = np.random.rand(next_neurons, 1) - 0.5
+    bias = np.random.rand(next_neurons,1) - 0.5
     model.append([weights, bias, activation, reg, reg_num, Types('Linear')])
     return model
 
@@ -419,14 +413,14 @@ class RNN:
     self.vocab_size = pr_neurons
     weights = np.random.rand(next_neurons, pr_neurons) - 0.5
     hidden_state = np.random.rand(hidden_neurons, hidden_neurons) - 0.5
-    bias = np.random.rand(next_neurons, 1) - 0.5
+    bias = np.random.rand(next_neurons,1) - 0.5
     self.seq_length = seq_length
 
     if model == None:
-      return [([weights, bias, 'tanh', reg, reg_num, Types('RNN'), seq_length])]
+      return [([weights, bias, 'Tanh', reg, reg_num, Types('RNN'), seq_length])]
 
     else:
-      model.append([weights, bias, 'tanh', reg, reg_num, Types('RNN'), seq_length])
+      model.append([weights, bias, 'Tanh', reg, reg_num, Types('RNN'), seq_length])
       return model
 
   def Compile(self, optimizer, loss, metrics, time_step, lr= 0.001, momentum=True, gamma=0.95):
@@ -457,7 +451,7 @@ class RNN:
     mbh = np.zeros((self.hidden_size, 1))
     mby = np.zeros((self.vocab_size,1)) 
 
-    all_loss = []
+    back = []
     hprev = np.zeros((self.hidden_size, 1))
 
     while n<= epochs:
@@ -472,17 +466,18 @@ class RNN:
 
         #initializing vectors
         m = len(inputs)
-        x, y = np.zeros((m, self.vocab_size,1)), np.zeros((m, self.vocab_size,1))
-        z_1, a_1 = np.zeros((m, self.hidden_size,1)), np.zeros((m, self.hidden_size,1))
+        x, y = np.zeros((m, self.vocab_size,)), np.zeros((m, self.vocab_size,))
+        #z_1, a_1 = np.zeros((m, self.hidden_size,1)), np.zeros((m, self.hidden_size,1))
         #z_2, a_2 = np.zeros((m, vocab_size,1)), np.zeros((m, vocab_size,1))
-        a_2 = np.zeros((m, self.vocab_size,1))
-        a_1[-1] = np.copy(hprev) #copying the last state of the network in previou iteration
+        #a_2 = np.zeros((m, self.vocab_size,1))
+        #a_1[-1] = np.copy(hprev) #copying the last state of the network in previou iteration
 
         loss = 0
         
-        #forward pass
-
-        loss += -(np.log(a_2[t][outputs[t],0])) #a bit weird loss
+        #forward
+        A = self.forward(model, x, y, inputs, outputs, m)
+        print('Success Forward!')
+        return
 
         #gradients
         dWxh = np.zeros_like(Wxh)
@@ -493,6 +488,15 @@ class RNN:
         hnext = np.zeros((self.hidden_size, self.vocab_size))
 
         # backward
+          
+        #backward pass
+        back = np.zeros((m,3))
+        for j in range(len(model)):
+          if j == 0:
+            back[t] = self.backward(A[-1-t], model[-1-j], y[k], self.loss, model[-1-j][5], model[-j], [0,0,0])
+          else:
+            back[t] = self.backward(A[-1-t], model[-1-j], y[k], self.loss, model[-1-j][5], model[-j], back[t-1])
+
 
         # att hprev
         hprev = a_1[-1]
@@ -507,7 +511,7 @@ class RNN:
             indexes = []
             h = hprev
             for t in range(200):
-                h = tanh(np.dot(Wxh, x) + np.dot(Whh, h))# + bh)
+                h = activation.Tanh(np.dot(Wxh, x) + np.dot(Whh, h))# + bh)
                 predict = softmax(np.dot(Why, h))# + by)
 
                 ix = np.random.choice(range(self.vocab_size), p=predict.ravel())
@@ -534,92 +538,4 @@ class RNN:
 
         p += self.seq_length # move data pointer
         n += 1      
-
-
-
-
-    l = []
-    ac = []
-    loss_ = getattr(losses, self.loss)
-    opt_ = getattr(optimizers, self.optimizer)
-
-    #print summary
-    self.summary(model)
-
-    pbar = tqdm(range(epochs))
-    timing = epochs/(epochs*100) 
-    for i,pb in enumerate(pbar):
-      pbar.set_description(f"Training... epoch {i}/{epochs}")
-      time.sleep(timing) 
-      avg_loss = 0
-      acc = 0
-      count = 0
-      samp = np.random.randint(0, y.shape[0], size=y.shape[0]//batch)
-      #samp = np.arange(0, y.shape[0], batch) #batch sample size
-      for k in samp:
-        A = list()
-        
-        count += 1
-
-        #forward pass
-        for j in range(len(model)):
-          if (j == 0):
-            A.append(self.forward(model[j], x[k]))
-          else:
-            A.append(self.forward(model[j], A[-1][2]))
-
-        #backward pass
-        all_loss = list()
-        for j in range(len(model)):
-          if j == 0:
-            all_loss.append(self.backward(A[-1-j], model[-1-j][2], y[k], self.loss, model[-1-j][5], model[-j], [0,0,0]))
-          else:
-            all_loss.append(self.backward(A[-1-j], model[-1-j][2], y[k], self.loss, model[-1-j][5], model[-j], all_loss[-1]))
-
-        reg = 0
-        #weight regularization
-        reg_1 = [model[i][4]*abs(all_loss[i][1]).mean() for i in range(len(model)) if model[i][3] == Regs.L1]
-        reg_1 = np.mean(reg_1) if len(reg_1) > 0 else 0  
-        reg_2 = [model[i][4]*(all_loss[i][1]**2).mean() for i in range(len(model)) if model[i][3] == Regs.L2]
-        reg_2 = np.mean(reg_2) if len(reg_2) > 0 else 0  
-        reg = reg_1 + reg_2
-
-        #loss
-        avg_loss += (loss_(A[-1][2], y[k])).mean() + reg
-        
-        if categoric:
-          if (np.argmax(A[-1][2]) == np.argmax(y[k])):
-            acc += 1
-
-        else:
-          if (int(A[-1][2][0]) == int(y[k])):
-            acc += 1
-
-        if self.momentum:
-          if count == 1:
-            gradients = [[self.lr*all_loss[j][1], self.lr*all_loss[j][2]] for j in range(len(model))]
-          else:
-            gradients = [[self.gamma*gradients[j][0] + self.lr*all_loss[j][1],
-                    self.gamma*gradients[j][1] + self.lr*all_loss[j][2]] for j in range(len(model))]
-        else:
-          gradients = all_loss
-        #update params
-        if self.optimizer == 'SGD':                 
-          model = opt_(model, gradients, self.momentum, self.lr) 
-        elif self.optimizer == 'RMSProp':
-          model = opt_(model, gradients, self.lr)
-        elif self.optimizer == 'Adam':
-          model = opt_(model, gradients, self.lr) 
-        else:
-          model = opt_(model, gradients, self.momentum) 
-
-      acc /= count
-      avg_loss /= count
-
-      print(f'accuracy: {acc}, loss: {avg_loss}')
-      l.append(avg_loss)
-      ac.append(acc)
-
-    return model, l, ac
-
 

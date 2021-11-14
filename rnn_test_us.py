@@ -93,6 +93,7 @@ while n<= ITERATIONS:
         y[t][outputs[t]] = 1
 
         z_1[t] = np.dot(Wxh, x[t]) + np.dot(Whh, a_1[t-1])# + bh
+        print(z_1[t].shape)
         a_1[t] = tanh(z_1[t])
         a_2[t] = softmax(np.dot(Why, a_1[t]))#+ by)
         #a_2[t] = softmax(z_2[t])

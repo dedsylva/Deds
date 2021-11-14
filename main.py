@@ -98,8 +98,8 @@ def main(argv):
       NN = RNN()
 
       #model = NN.Input(hidden_size, input_shape=(vocab_size,), activation='ReLu')
-      model = NN.RNN(vocab_size, 1, hidden_size, None, seq_length=seq_length)
-      model = NN.Output(vocab_size, 1, model, activation='Linear')
+      model = NN.RNN(vocab_size, hidden_size, hidden_size, None, seq_length=seq_length)
+      model = NN.Output(hidden_size, vocab_size, model, activation='Linear')
 
       #compile model
       NN.Compile(optimizer='SGD', loss='MSE', metrics='accuracy', 
@@ -107,6 +107,10 @@ def main(argv):
 
 
       #train the model
+      NN.Train(model, data, 
+        char_to_ix, ix_to_char, epochs=epochs, batch=BS) 
+      exit(0)
+
       model, losses, accuracy = NN.Train(model, data, 
         char_to_ix, ix_to_char, epochs=epochs, batch=BS) 
 
