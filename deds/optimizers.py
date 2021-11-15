@@ -81,6 +81,36 @@ def RNN_Adam(model, gradients, lr=0.001, b1=0.9, b2=0.999, eps=1e-8):
   return model
 
 
+def RNN_AdamGrad(model, gradients, lr=0.001, b1=0.9, eps=1e-7):
+  _types = [model[j][5].name for j in range(len(model))]
+  # Adam doesn't have momentum (it estimates momentum), so we don't have to worry about that case
+
+  t, j = 0, 0
+  m_w = [np.zeros_like(model[i][0]) for i in range(len(model))]
+  m_b = [np.zeros_like(model[i][1]) for i in range(len(model))]
+
+  # Special case for RNN
+  _indexes = [t for t in range(len(_types)) if _types[t] == 'RNN'] # we know exactly which layer(s) has RNN(s)
+  m_h = [np.zeros_like(model[i][6]) for i in range(len(_indexes))] # not sure if this in _indexes is gonna work out properly, 
+  # TODO: check for more than 1 layers of RNN
+
+  t,j = 0,0
+
+  for i in range(len(model)):
+    m_w[i] = np.square(gradients[i][0])
+    m_b[i] = np.square(gradients[i][1])
+    model[i][0] -= lr*gradients[i][0] / (np.sqrt(m_w[i]) + eps) 
+    model[i][1] -= lr*gradients[i][1] / (np.sqrt(m_b[i]) + eps) 
+
+    if model[i][5] == Types.RNN:
+      m_h[j] = np.square(gradients[i][2])
+
+      model[i][6] -= lr*gradients[i][2]/ (np.sqrt(m_h[j]) + eps) 
+      j += 1 
+
+  return model    
+
+
 # Adam (Adaptive Moment Estimation): the greates of them all.
 # A simple combination of RMSProp + Moentum approach
 def Adam(model, gradients, lr=0.001, b1=0.9, b2=0.999, eps=1e-8):

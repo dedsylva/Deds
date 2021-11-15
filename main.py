@@ -92,7 +92,7 @@ def main(argv):
       epochs = 10000
       BS = 8
       lr = 0.01
-      hidden_size = 100
+      hidden_size = 150
       time_step = 25 #25 chars generated every timestep
       seq_length = 25 #
       NN = RNN()
@@ -102,7 +102,7 @@ def main(argv):
       model = NN.Output(hidden_size, vocab_size, model, activation='Softmax')
 
       #compile model
-      NN.Compile(optimizer='Adam', loss='MSE', metrics='accuracy', 
+      NN.Compile(optimizer='SGD', loss='MSE', metrics='accuracy', 
                  time_step=time_step, lr=lr, momentum=False)
 
 

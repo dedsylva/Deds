@@ -62,6 +62,10 @@ python -m unittest tests/tests_deds.py
 ```
 
 ### Todo
+<b>* Tests for RNN </b>
+<b>* Multiple RNNs </b>
+<b>* Clean RNN code (optimizers and Train)</b>
+
 * Dense 
     * Implement forward/backward pass [x]
     * Implement SGD Optimizer [x]

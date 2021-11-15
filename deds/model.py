@@ -272,18 +272,21 @@ class RNN:
     self.avg_loss = 0
     loss_ = getattr(losses, self.loss)
 
+    # *** Multi RNN Architecture *** #
+    # If we have more than one RNN layer, we need to store the hidden_state h[t-1] of each layer
+    # in order to do the hidden cells att
+
     # store the hidden_states of every RNN layer
     _types = [model[j][5].name for j in range(len(model))]
     _indexes = [t for t in range(len(_types)) if _types[t] == 'RNN'] # we know exactly which layer(s) has RNN(s)
-    #hidden = [0 for i in range(len(_indexes))]
-    #hidden[0] = 3
-    #print(hidden, hidden[0])
+    h_t0 = [np.zeros((self.hidden_size,1)) for i in range(len(_indexes))] # hidden state of time = 0
+    rnn = 0 # which RNN layer we are talking about (relates to h_t0)
+    #print(f'we have {len(_indexes)} RNN layers current')
 
-    h_t0 = np.zeros((self.hidden_size,1)) # hidden state of time = 0
+
     for t in range(m):
       x[t][inputs[t]] = 1
       y[t][outputs[t]] = 1
-
 
       for j in range(len(model)):
         _type = model[j][5]
@@ -295,12 +298,13 @@ class RNN:
         if _type == Types.RNN:
           assert act == activation.Tanh, f'Wrong activation layer. RNN uses Tanh, but got {act}'
 
-          h = np.dot(model[j][0],_input) + np.dot(model[j][6], h_t0) + model[j][1] 
+          h = np.dot(model[j][0],_input) + np.dot(model[j][6], h_t0[rnn]) + model[j][1] 
           A.append([_input, h, act(h)])
 
-          # hprev
-          h_t0 = act(h)
+          rnn = rnn + 1 if rnn + 1 < len(_indexes) else 0 # go to next RNN layer
 
+          # hprev
+          h_t0[rnn] = act(h)
 
         else:
           z = np.dot(model[j][0], _input) + model[j][1] 
@@ -310,11 +314,7 @@ class RNN:
       self.avg_loss += -(np.log(A[-1][2][outputs[t],0])) # TODO: change this to loss_()
       possible_loss = abs(np.log(A[-1][2][outputs[t],0])) 
       if possible_loss < 1e-4: 
-        print(f'Close to zero in computing log, got {possible_loss}')
-
-    #print(A[0][2])
-    #print(A[-1][2])
-    #exit(0)
+        print(f'WARNING! Close to zero in computing log, got {possible_loss}')
 
     return h_t0, A
 
@@ -373,10 +373,10 @@ class RNN:
 
           # dc_dwhh
           dc_dz_h = np.dot(dc_dz_t1.T, model[j+1][0]).T * d_act_(A[i][1])
-          dz_dw_h = A[i][2][t-1].T 
+          dz_dw_h = A[i][2].T 
           gradients[j][2] += np.dot(dc_dz_h, dz_dw_h)
 
-          dc_dz_t1 = dc_da # TODO: check this
+          dc_dz_t1 = dc_da
 
         else:
           W_t1 = model[j+1][0] # weight of next layer
@@ -458,6 +458,9 @@ class RNN:
 
   def Train(self, model, data, char_to_ix, ix_to_char, epochs=100000, batch=32):
 
+    #print summary
+    self.summary(model)
+
     #Training (trying to predict next character)
     n,p = 0,0
     opt_ = getattr(optimizers, 'RNN_'+self.optimizer)
@@ -482,26 +485,11 @@ class RNN:
         #forward
         hprev, A = self.forward(model, x, y, inputs, outputs, m)
 
-        # gradients for optimization
-        #mWxh = np.zeros_like(model[0][0])
-        #mbx = np.zeros_like(model[0][1])
-        #mWhh = np.zeros_like(model[0][6])
-        #mWhy = np.zeros_like(model[1][0])
-        #mby = np.zeros_like(model[1][1])
-
         # backward
         gradients = self.backward(A, model, y, inputs, outputs, m)
 
-        #optimizing parameters
-        #mWxh += np.square(gradients[0][0])
-        #mbx += np.square(gradients[0][1])
-        #mWhh += np.square(gradients[0][2])
-        #mWhy += np.square(gradients[1][0])
-        #mby += np.square(gradients[1][1])
-
         for g in [gradients[0][0], gradients[0][1], gradients[0][2], gradients[1][0], gradients[1][1]]:
           np.clip(g, -5, 5, out=g)
-
 
         #sample from model to see the performance (just for showing off)
         if n % 1000 == 0:
@@ -511,7 +499,7 @@ class RNN:
           x = np.zeros((self.vocab_size,1))
           x[inputs[0]] = 1
           indexes = []
-          h = hprev
+          h = hprev[0]
 
           for t in range(200):
 
@@ -536,27 +524,10 @@ class RNN:
           model = opt_(model, gradients, self.lr)
         elif self.optimizer == 'Adam':
           model = opt_(model, gradients, self.lr) 
+        elif self.optimizer == 'AdamGrad':
+          model = opt_(model, gradients, self.lr) 
         else:
-          raise ValueError(f'Optimizer not supported. Currently available ones: SGD, RMSProp, Adam, but got {self.optimizer} instead') 
-
-
-
-        #optimizing parameters
-        #mWxh += np.square(gradients[0][0])
-        #mbx += np.square(gradients[0][1])
-        #mWhh += np.square(gradients[0][2])
-        #mWhy += np.square(gradients[1][0])
-        #mby += np.square(gradients[1][1])
-
-        #model[0][0] -= self.lr * gradients[0][0] / np.sqrt(mWxh + 1e-8)
-        #model[0][1] -= self.lr * gradients[0][1] / np.sqrt(mbx + 1e-8)
-        #model[0][6] -= self.lr * gradients[0][2] / np.sqrt(mWhh + 1e-8)
-        #model[1][0] -= self.lr * gradients[1][0] / np.sqrt(mWhy + 1e-8)
-        #model[1][1] -= self.lr * gradients[1][1] / np.sqrt(mby + 1e-8)
-
-
-        #if n % 1000 == 0:
-          #print(model[0][0], model[0][6], model[1][0])
+           raise ValueError(f'Optimizer not supported. Currently available ones: SGD, RMSProp, Adam, but got {self.optimizer} instead') 
 
 
         p += self.seq_length # move data pointer
