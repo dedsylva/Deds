@@ -102,7 +102,7 @@ def main(argv):
       model = NN.Output(hidden_size, vocab_size, model, activation='Softmax')
 
       #compile model
-      NN.Compile(optimizer='SGD', loss='MSE', metrics='accuracy', 
+      NN.Compile(optimizer='Adam', loss='MSE', metrics='accuracy', 
                  time_step=time_step, lr=lr, momentum=False)
 
 
@@ -113,7 +113,6 @@ def main(argv):
 
       model, losses, accuracy = NN.Train(model, data, 
         char_to_ix, ix_to_char, epochs=epochs, batch=BS) 
-
 
 
     else:

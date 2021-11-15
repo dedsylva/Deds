@@ -32,4 +32,4 @@ def Tanh(x):
   return np.tanh(x)
 
 def dTanh(x):
-  return 1 - np.square(Tanh(x))
+  return 1 - np.square(np.tanh(x))

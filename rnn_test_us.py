@@ -88,8 +88,7 @@ while n<= ITERATIONS:
     
 
     #forward pass
-    #for t in range(len(inputs)):
-    for t in range(5):
+    for t in range(len(inputs)):
         x[t][inputs[t]] = 1
         y[t][outputs[t]] = 1
 
@@ -100,9 +99,10 @@ while n<= ITERATIONS:
         #a_2[t] = softmax(z_2[t])
 
         loss += -(np.log(a_2[t][outputs[t],0])) #a bit weird loss
-        print('got here')
-        print(a_2[t][outputs[t],0], -(np.log(a_2[t][outputs[t],0])))
-    exit(0)
+        possible_loss = abs(np.log(a_2[t][outputs[t],0]))
+        #if possible_loss < 1e-4:
+        #print(f'Too close to zero for loss. Got {possible_loss}')
+
 
     #gradients
     dWxh = np.zeros_like(Wxh)
@@ -111,6 +111,7 @@ while n<= ITERATIONS:
     dWhy = np.zeros_like(Why)
     dby = np.zeros_like(by)
     hnext = np.zeros((hidden_size, vocab_size))
+
 
     #backward pass
     for t in range(len(inputs)):
@@ -135,7 +136,6 @@ while n<= ITERATIONS:
         #exploding gradients solution
         for dparam in [dWxh, dWhh, dWhy]:#, dbh, dby]:
             np.clip(dparam, -5, 5, out=dparam)
-
 
     hprev = a_1[-1]
 
