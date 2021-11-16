@@ -63,7 +63,10 @@ python -m unittest tests/tests_deds.py
 
 ### Todo
 <b>* Tests for RNN </b>
-<b>* Multiple RNNs </b>
+  * Put Dense as the first layer, then RNN
+  * Support L1, L2 Regularizations for Dense Layers in RNN Class
+  * Creating Multiple RNNs with different hidden sizes between them
+
 <b>* Clean RNN code (optimizers and Train)</b>
 
 * Dense 

@@ -94,18 +94,18 @@ def main(argv):
       lr = 0.01
       hidden_size = 150
       linear_size = 120
-      time_step = 25 #25 chars generated every timestep
-      seq_length = 25 #
+      seq_length = 25 # 25 chars generated every timestep
       NN = RNN()
 
       #model = NN.Input(hidden_size, input_shape=(vocab_size,), activation='ReLu')
-      model = NN.RNN(vocab_size, hidden_size, hidden_size, None, seq_length=seq_length)
-      model = NN.Linear(hidden_size, linear_size, model, activation='ReLu')
-      model = NN.Output(linear_size, vocab_size, model, activation='Softmax')
+      model = NN.RNN(vocab_size, hidden_size, hidden_size, None)
+      #model = NN.RNN(hidden_size, hidden_size, hidden_size, model)
+      #model = NN.Linear(hidden_size, linear_size, model, activation='ReLu')
+      model = NN.Output(hidden_size, vocab_size, model, activation='Softmax')
 
       #compile model
-      NN.Compile(optimizer='Adam', loss='MSE', metrics='accuracy', 
-                 time_step=time_step, lr=lr, momentum=False)
+      NN.Compile(optimizer='SGD', loss='MSE', metrics='accuracy', 
+                 seq_length=seq_length, vocab_size=vocab_size, hidden_size=hidden_size, lr=lr, momentum=False)
 
 
       #train the model

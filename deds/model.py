@@ -16,7 +16,7 @@ from deds.utils.enumerators import Types, Regs
 # model[i][4] is the factor of the regularization (float)
 # model[i][5] is the Type of the Layer (currently availables: Input, Output, Linear, RNN)
 
-# If the layer is a RNN, there will be a model[i][6] which is the Hidden State Weights Matrix and a model[i][7] for the number of timesteps
+# If the layer is a RNN, there will be a model[i][6] which is the Hidden State Weights Matrix 
 
 # If the user adds dropout to the layer, there will be another entry where:
 #   model[i][0] == 'Dropout'
@@ -267,7 +267,7 @@ class RNN:
   def __init__(self):
     pass
 
-  def forward(self, model, x, y, inputs, outputs, m):
+  def forward(self, model, x, inputs, outputs, m):
     A = list()
     self.avg_loss = 0
     loss_ = getattr(losses, self.loss)
@@ -283,10 +283,8 @@ class RNN:
     rnn = 0 # which RNN layer we are talking about (relates to h_t0)
     #print(f'we have {len(_indexes)} RNN layers current')
 
-
     for t in range(m):
       x[t][inputs[t]] = 1
-      y[t][outputs[t]] = 1
 
       for j in range(len(model)):
         _type = model[j][5]
@@ -327,7 +325,7 @@ class RNN:
     for j in range(len(model)):
       if model[j][5] == Types.RNN:
         # weights of layer, bias , weight of cell, hidden time update
-        gradients.append([np.zeros_like(model[j][0]), np.zeros_like(model[j][1]) , np.zeros_like(model[j][6]), np.zeros((self.hidden_size, self.vocab_size))])
+        gradients.append([np.zeros_like(model[j][0]), np.zeros_like(model[j][1]) , np.zeros_like(model[j][6]), np.zeros_like(model[j][0])])
       else:
         # weight of layer, bias
         gradients.append([np.zeros_like(model[j][0]), np.zeros_like(model[j][1])])
@@ -394,6 +392,43 @@ class RNN:
 
     return gradients
 
+  # Evaluating model during training
+  def CheckModel(self, model, ix_to_char, x, inputs, outputs, m, hprev):
+
+  
+    #x[inputs[0]] = 1
+    indexes = []
+    h = hprev[0]
+    hidden_cell = hprev[0]
+
+    for t in range(self.char_eval):
+
+      for j in range(len(model)):
+        act = getattr(activation, model[j][2])
+        _type = model[j][5]
+        _input= x if j == 0 else h
+
+        if _type == Types.RNN:
+          h = act(np.dot(model[j][0], _input) + np.dot(model[j][6], hidden_cell) + model[j][1])
+          hidden_cell = h
+        else:
+          h = act(np.dot(model[j][0], _input) + model[j][1])
+
+      # sample words, ravel() simply squashes predict into an array
+      ix = np.random.choice(range(self.vocab_size), p=h.ravel())
+
+      #saving the predicted character 
+      x = np.zeros((self.vocab_size,1))
+      x[ix] = 1
+
+      indexes.append(ix)
+
+    txt = ''.join(ix_to_char[ix] for ix in indexes)
+    print('----\n {} \n----'.format(txt))
+
+    return
+
+
   def summary(self, model):
     print(f'| Total Number of Layers: {len(model)} |')
     for i in range(len(model)):
@@ -424,27 +459,27 @@ class RNN:
     model.append([weights, bias, activation, reg, reg_num, Types('Linear')])
     return model
 
-  def RNN(self, pr_neurons, next_neurons, hidden_neurons, model, seq_length, reg=None, reg_num=0):
+  def RNN(self, pr_neurons, next_neurons, hidden_neurons, model, reg=None, reg_num=0):
     np.random.seed(23)
-    self.hidden_size = hidden_neurons
-    self.vocab_size = pr_neurons
     weights = np.random.randn(next_neurons, pr_neurons) * 0.01 
     hidden_state = np.random.randn(hidden_neurons, hidden_neurons) * 0.01 
     bias = np.zeros((next_neurons,1))
-    self.seq_length = seq_length
 
     if model == None:
-      model = [([weights, bias, 'Tanh', reg, reg_num, Types('RNN'), hidden_state, seq_length])]
+      model = [([weights, bias, 'Tanh', reg, reg_num, Types('RNN'), hidden_state])]
       return model 
     else:
-      model.append([weights, bias, 'Tanh', reg, reg_num, Types('RNN'), hidden_state, seq_length])
+      model.append([weights, bias, 'Tanh', reg, reg_num, Types('RNN'), hidden_state])
       return model
 
-  def Compile(self, optimizer, loss, metrics, time_step, lr= 0.001, momentum=True, gamma=0.95):
+  def Compile(self, optimizer, loss, metrics, seq_length, vocab_size, hidden_size, char_eval= 200, lr= 0.001, momentum=True, gamma=0.95):
     self.optimizer = optimizer
     self.loss = loss
     self.lr = lr
-    self.time_step = time_step
+    self.seq_length= seq_length 
+    self.vocab_size = vocab_size
+    self.hidden_size = hidden_size
+    self.char_eval = char_eval # how many characters the model outputs to see its performance during training
 
     #optimizer with momentum
     if momentum:
@@ -483,7 +518,7 @@ class RNN:
         x, y = np.zeros((m, self.vocab_size,)), np.zeros((m, self.vocab_size,))
         
         #forward
-        hprev, A = self.forward(model, x, y, inputs, outputs, m)
+        hprev, A = self.forward(model, x, inputs, outputs, m)
 
         # backward
         gradients = self.backward(A, model, y, inputs, outputs, m)
@@ -495,29 +530,9 @@ class RNN:
         if n % 1000 == 0:
           print(f'epoch: {n}, loss: {self.avg_loss}') 
 
-          #generate 200 characters to see how the network is
-          x = np.zeros((self.vocab_size,1))
-          x[inputs[0]] = 1
-          indexes = []
-          h = hprev[0]
-
-          for t in range(200):
-            # TODO: Substitute code below for self.forward()
-            h = activation.Tanh(np.dot(model[0][0], x) + np.dot(model[0][6], h) + model[0][1])
-            lin = activation.ReLu(np.dot(model[1][0], h) + model[1][1]) 
-            predict = activation.Softmax(np.dot(model[2][0], lin) + model[2][1])
-
-            # sample words, ravel() simply squashes predict into an array
-            ix = np.random.choice(range(self.vocab_size), p=predict.ravel())
-
-            #saving the predicted character 
-            x = np.zeros((self.vocab_size,1))
-            x[ix] = 1
-
-            indexes.append(ix)
-
-          txt = ''.join(ix_to_char[ix] for ix in indexes)
-          print('----\n {} \n----'.format(txt))
+          #generate m characters to see how the network is
+          x = np.zeros((model[-1][0].shape[0],1))
+          self.CheckModel(model, ix_to_char, x, inputs, outputs, self.char_eval, hprev)
 
         #update params
         if self.optimizer == 'SGD':                 
