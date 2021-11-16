@@ -327,7 +327,7 @@ class RNN:
     for j in range(len(model)):
       if model[j][5] == Types.RNN:
         # weights of layer, bias , weight of cell, hidden time update
-        gradients.append([np.zeros_like(model[j][0]), np.zeros_like(model[j][1]) , np.zeros_like(model[j][6]), np.zeros((model[j][6].shape[0], model[j+1][0].shape[0]))])
+        gradients.append([np.zeros_like(model[j][0]), np.zeros_like(model[j][1]) , np.zeros_like(model[j][6]), np.zeros((self.hidden_size, self.vocab_size))])
       else:
         # weight of layer, bias
         gradients.append([np.zeros_like(model[j][0]), np.zeros_like(model[j][1])])
@@ -502,10 +502,12 @@ class RNN:
           h = hprev[0]
 
           for t in range(200):
-
+            # TODO: Substitute code below for self.forward()
             h = activation.Tanh(np.dot(model[0][0], x) + np.dot(model[0][6], h) + model[0][1])
-            predict = activation.Softmax(np.dot(model[1][0], h) + model[1][1])
+            lin = activation.ReLu(np.dot(model[1][0], h) + model[1][1]) 
+            predict = activation.Softmax(np.dot(model[2][0], lin) + model[2][1])
 
+            # sample words, ravel() simply squashes predict into an array
             ix = np.random.choice(range(self.vocab_size), p=predict.ravel())
 
             #saving the predicted character 
