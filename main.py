@@ -75,7 +75,7 @@ def main(argv):
     plt.show()
 
   elif _model == 'RNN':
-    print_model = os.environ.get('PRINT') if os.environ.get('PRINT') is not None else False
+    print_model = bool(os.environ.get('PRINT')) if os.environ.get('PRINT') is not None else False
     _source = argv[0] if len(argv) > 0 else 'deds/datasets/kafka.txt'
 
     if _source.startswith('http'):
@@ -109,13 +109,13 @@ def main(argv):
     model = NN.Output(linear_size, vocab_size, model, activation='Softmax')
 
     #compile model
-    NN.Compile(optimizer='Adam', loss='MSE', metrics='accuracy', 
+    NN.Compile(optimizer='SGD', loss='MSE', metrics='accuracy', 
                seq_length=seq_length, vocab_size=vocab_size, hidden_size=hidden_size, lr=lr, momentum=False)
 
 
     #train the model
     warning = NN.Train(model, data, 
-      char_to_ix, ix_to_char, epochs=epochs, print_model=False) 
+      char_to_ix, ix_to_char, epochs=epochs, print_model=print_model) 
 
 
   else:
