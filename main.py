@@ -5,10 +5,10 @@ from deds.model import Dense, RNN
 from deds.database import Wheat, MNIST
 
 def main(argv):
-  data = [a.split('=') for a in argv]
+  args = [a.split('=') for a in argv]
 
-  if data[0][0] == 'model':
-    if data[0][1] == 'MNIST':
+  if args[0][0] == 'model':
+    if args[0][1] == 'MNIST':
       db = MNIST()
       X_train, X_test, Y_train, Y_test = db.get_data()
       epochs = 100 
@@ -41,9 +41,9 @@ def main(argv):
       plt.legend()
       plt.show()
 
-    elif data[0][1] == 'Wheat':
+    elif args[0][1] == 'Wheat':
       db = Wheat()
-      train = float(data[1][1]) if len(data) > 1 else 0.9
+      train = float(args[1][1]) if len(args) > 1 else 0.9
       X_train, X_test, Y_train, Y_test = db.get_data(train=train)
       epochs = 10000
       BS = 8
@@ -73,7 +73,8 @@ def main(argv):
       plt.legend()
       plt.show()
 
-    elif data[0][1] == 'RNN':
+    elif args[0][1] == 'RNN':
+      print_model = args[1][1] if ( len(args) > 1 and args[1][0] in('print', 'Print'))  else False
 
       # source = 'harry_potter.txt'
       source = 'deds/datasets/kafka.txt'
@@ -92,16 +93,20 @@ def main(argv):
       epochs = 10000
       BS = 8
       lr = 0.01
+      first_linear = 90
       hidden_size = 150
+      hidden_size_2 = 100
       linear_size = 120
       seq_length = 25 # 25 chars generated every timestep
       NN = RNN()
 
       #model = NN.Input(hidden_size, input_shape=(vocab_size,), activation='ReLu')
-      model = NN.RNN(vocab_size, hidden_size, hidden_size, None)
-      #model = NN.RNN(hidden_size, hidden_size, hidden_size, model)
-      #model = NN.Linear(hidden_size, linear_size, model, activation='ReLu')
-      model = NN.Output(hidden_size, vocab_size, model, activation='Softmax')
+      model = NN.Linear(vocab_size, first_linear, None, activation='ReLu')
+      #model= NN.RNN(vocab_size, hidden_size, hidden_size, None)
+      model = NN.RNN(first_linear, hidden_size, hidden_size, model)
+      model = NN.RNN(hidden_size, hidden_size_2, hidden_size_2, model)
+      model = NN.Linear(hidden_size_2, linear_size, model, activation='ReLu')
+      model = NN.Output(linear_size, vocab_size, model, activation='Softmax')
 
       #compile model
       NN.Compile(optimizer='SGD', loss='MSE', metrics='accuracy', 
@@ -110,17 +115,12 @@ def main(argv):
 
       #train the model
       NN.Train(model, data, 
-        char_to_ix, ix_to_char, epochs=epochs, batch=BS) 
-      exit(0)
-
-      model, losses, accuracy = NN.Train(model, data, 
-        char_to_ix, ix_to_char, epochs=epochs, batch=BS) 
-
+        char_to_ix, ix_to_char, epochs=epochs, batch=BS, print_model=False) 
 
     else:
       raise Exception ('The Model you entered are not available')
   else:
-    raise ValueError ('The argument \'{}\' is invalid!'.format(data[0][0]))
+    raise ValueError ('The argument \'{}\' is invalid!'.format(args[0][0]))
 
 if __name__ == '__main__':
   main(sys.argv[1:])
