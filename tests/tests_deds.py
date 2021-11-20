@@ -200,5 +200,6 @@ class TestSimpleRNN(unittest.TestCase):
     self.assertEqual(model[-1][2], 'Softmax') # activation of output
 
 
+
 if __name__ == '__main__':
     unittest.main()     

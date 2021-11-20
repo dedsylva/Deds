@@ -83,6 +83,7 @@ NN.Compile(optimizer='SGD', loss='MSE', metrics='accuracy',
 					 seq_length=seq_length, vocab_size=vocab_size, hidden_size=hidden_size, lr=lr, momentum=False)
 
 ```
+
 ## Tests
 
 ```python

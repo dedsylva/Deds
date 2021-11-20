@@ -58,3 +58,4 @@ class TTT:
     ix_to_char = { i:ch for i,ch in enumerate(chars)}
 
     return vocab_size, char_to_ix, ix_to_char
+
