@@ -1,5 +1,5 @@
 import numpy as np
-from deds.utils.enumerators import Types, Regs
+from deds.extra.utils import Types, Regs
 
 def SGD(model, gradients, momentum, lr):
   _types = [model[j][5] for j in range(len(model))]
@@ -52,8 +52,8 @@ def RNN_Adam(model, gradients, lr=0.001, b1=0.9, b2=0.999, eps=1e-8):
 
   # Special case for RNN
   _indexes = [t for t in range(len(_types)) if _types[t] == 'RNN'] # we know exactly which layer(s) has RNN(s)
-  m_h = [np.zeros_like(model[i][6]) for i in range(len(_indexes))] # not sure if this in _indexes is gonna work out properly, 
-  v_h = [np.zeros_like(model[i][6]) for i in range(len(_indexes))]
+  m_h = [np.zeros_like(model[i][6]) for i in _indexes] # not sure if this in _indexes is gonna work out properly, 
+  v_h = [np.zeros_like(model[i][6]) for i in _indexes]
   # TODO: check for more than 1 layers of RNN
 
   for i in range(len(model)):

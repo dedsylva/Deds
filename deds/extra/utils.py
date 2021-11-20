@@ -1,5 +1,22 @@
 #! usr/bin/python3
 
+from enum import Enum, unique
+
+@unique
+class Types(Enum):
+  Input = 'Input'
+  Output = 'Output'
+  Linear = 'Linear'
+  RNN = 'RNN'
+  Dropout = 'Dropout'
+
+@unique
+class Regs(Enum):
+  L1 = 'L1'
+  L2 = 'L2'
+  No = None
+
+
 import numpy as np
 
 # Keras function without having to pip3 install tensorflow (500 MB is A LOT)
@@ -18,3 +35,16 @@ def to_categorical(y, num_classes=None, dtype='float32'):
   output_shape = input_shape + (num_classes,)
   categorical = np.reshape(categorical, output_shape)
   return categorical
+
+
+def fetch(url):
+  import requests, os, hashlib, tempfile
+  fp = os.path.join(tempfile.gettempdir(), hashlib.md5(url.encode('utf-8')).hexdigest()) # creates /tmp/<hexdecimal> directory
+  print("fething %s", url)
+  dat = requests.get(url).content
+  with open(fp+".tmp", "wb") as f:
+    f.write(dat)
+  os.rename(fp+".tmp", fp)
+  return dat
+
+

@@ -2,10 +2,7 @@ import numpy as np
 import pandas as pd
 import math
 
-class Wheat():
-  def __init__(self):
-    pass
-
+class Wheat:
   def get_data(self, train=0.9):
 
     #loads data
@@ -35,16 +32,11 @@ class Wheat():
 
     return X_train, X_test, Y_train, Y_test
 
-class MNIST():
-  def __init__(self):
-    pass
-
+class MNIST:
   def get_data(self):
     #load data
-    #from keras.datasets import mnist
-    #from keras.utils import to_categorical
     from deds.datasets import fetch_mnist
-    from deds.utils.np_utils import to_categorical
+    from deds.extra.utils import to_categorical
 
     train_images, train_labels, test_images, test_labels = fetch_mnist()
 
@@ -55,3 +47,14 @@ class MNIST():
     Y_test =  to_categorical(test_labels).reshape((10000, 10, 1))
 
     return X_train, X_test, Y_train, Y_test
+
+class TTT:
+  def get_data(self, data):
+    chars = list(set(data)) #set filters unique characters already
+    data_size, vocab_size = len(data), len(chars)
+
+    # hot encoding (sparse, but just a example, should use word embedding)
+    char_to_ix = { ch:i for i,ch in enumerate(chars)}
+    ix_to_char = { i:ch for i,ch in enumerate(chars)}
+
+    return vocab_size, char_to_ix, ix_to_char
