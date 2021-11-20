@@ -9,9 +9,9 @@ Your simple numpy from scratch deep learning library, created just to keep track
 For a simple test
 
 ```python
-python main.py model=MNIST # mnist
-python main.py model=Wheat # wheat seeds class prediction
-python main.py model=RNN print=True # simple RNN model trying to reproduce text input (source)
+MODEL=MNIST python3 main.py # mnist
+MODEL=WHEAT python3 main.py # wheat seeds class prediction
+MODEL=RNN PRINT=True python3 main.py # simple RNN model trying to reproduce text input (source)
 ```
 
 Or just modify using <b>main.py</b>
