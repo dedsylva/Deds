@@ -309,6 +309,8 @@ class RNN:
         print(f'WARNING! Close to zero in computing log, got {possible_loss}')
         self.WARNING = True
 
+    self.losses.append(self.avg_loss)
+
     return h_t0, A
 
 
@@ -497,12 +499,13 @@ class RNN:
     ret = list() 
     self.WARNING = False
     self.show_summary = show_summary
+    self.losses = list()
 
     #print summary
     if self.show_summary:
       self.summary(model)
 
-    # the last hidden state, for creating samples from the model (should be optional)
+    # the last hidden state, for creating samples from the model
     hprev = np.zeros((self.hidden_size, 1))
 
     pbar = tqdm(range(epochs))
@@ -512,7 +515,7 @@ class RNN:
 
         #when we finish the training data
       if p+self.seq_length+1 >= len(data) or n == 0:
-          hprev = np.zeros((self.hidden_size, 1)) #FOR FORWARD PASS AT SAMPLE FUNCTION!!
+          hprev = np.zeros((self.hidden_size, 1)) # for forward pass at sample function
           p = 0 #start again the training data
       
       #vetores de indices
@@ -576,6 +579,6 @@ class RNN:
 
     if self.return_gradients:
       ret.append(gradients) 
-      return ret, self.WARNING
+      return self.losses, ret, self.WARNING
     else:
-      return self.WARNING
+      return self.losses, self.WARNING

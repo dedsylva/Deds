@@ -87,7 +87,7 @@ NN.Compile(optimizer='SGD', loss='MSE', metrics='accuracy',
 ## Tests
 
 ```python
-python -m unittest tests/tests_deds.py
+python -m unittest -v tests/tests_deds.py
 ```
 
 ### Todo

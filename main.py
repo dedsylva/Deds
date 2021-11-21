@@ -93,7 +93,7 @@ def main(argv):
     vocab_size, char_to_ix, ix_to_char  = db.get_data(data)
 
     # hyperparameters
-    epochs = 10
+    epochs = 10000
     lr = 0.01
     first_linear = 90
     hidden_size = 150
@@ -114,7 +114,7 @@ def main(argv):
 
 
     #train the model
-    warning = NN.Train(model, data, 
+    loss, warning = NN.Train(model, data, 
       char_to_ix, ix_to_char, epochs=epochs, print_model=print_model) 
 
 
