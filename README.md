@@ -111,7 +111,7 @@ NN.Compile(optimizer='SGD', loss='MSE', metrics='accuracy',
 * RNN 
   * Vanilla RNN [] 
     * Implement Vanilla RNN [x]
-    * Create Unit Tests for RNN []
+    * Create Unit Tests for RNN [x]
   * LSTM []
     * Implement LSTM []
     * Create Unit Tests for LSTM []

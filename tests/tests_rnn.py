@@ -4,7 +4,6 @@ import unittest
 from unittest_prettify.colorize import colorize, GREEN 
 from deds.database import TTT
 
-
 @colorize(color=GREEN)
 class TestSimpleRNN(unittest.TestCase):
   source = 'deds/datasets/kafka.txt'

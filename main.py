@@ -3,6 +3,7 @@
 import sys
 import os
 from deds.model import Dense, RNN 
+import deds.activation
 from deds.database import Wheat, MNIST, TTT 
 from deds.extra.utils import fetch 
 
@@ -18,11 +19,10 @@ def main(argv):
     gamma = 0.95
 
     NN = Dense()
-
-    model = NN.Input(128, input_shape=X_train.shape[1], activation='ReLu')
-    model = NN.Linear(128, 70, model, activation='ReLu')#, regularization='l2', reg=0.0001)
+    model = NN.Input(128, input_shape=X_train.shape[1], activation=deds.activation.ReLu)
+    model = NN.Linear(128, 70, model, activation=deds.activation.ReLu)#, regularization='l2', reg=0.0001)
     model = NN.Dropout(model, p=0.5)
-    model = NN.Output(70, 10, model, activation='Softmax')
+    model = NN.Output(70, 10, model, activation=deds.activation.Softmax)
 
     #compile model
     NN.Compile(optimizer='SGD', loss='MSE', metrics='accuracy', lr=lr, 

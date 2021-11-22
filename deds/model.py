@@ -23,7 +23,11 @@ from deds.extra.utils import Types, Regs
 #   model[i][1] == dropout factor (float)
 
 class Dense:
-  def forward(self, layer, x):
+  def __init__(self):
+    self.model = None
+
+  @staticmethod
+  def forward(layer, x):
     # W -- weight nxm matrix of for the next layer
     # x -- input vector of shape (m,1)
     # b -- bias vector of shape (n,1)
@@ -39,7 +43,7 @@ class Dense:
       W = layer[0]
       b = layer[1]
       actv = layer[2]
-      act = getattr(activation, actv)
+      act = getattr(activation, actv) if type(actv) == str else actv
       res = np.dot(W,x) + b
       return [x, res, act(res)]
 
@@ -47,7 +51,7 @@ class Dense:
       W = layer[0]
       b = layer[1]
       actv = layer[2]
-      act = getattr(activation, actv)
+      act = getattr(activation, actv) if type(actv) == str else actv
       p = layer[4]
       y = np.random.binomial(1, p, size=(x.shape[0],1)).astype('float64')
       x *= y
@@ -57,8 +61,8 @@ class Dense:
     else:
       raise ValueError(f' {_type} is an Incorrect type of Layer')
 
-
-  def backward(self, A, actv, y, loss, _type, next_model, back):
+  @staticmethod
+  def backward(A, actv, y, loss, _type, next_model, back):
     # we do backpropagation
     # Output layer:
     # dc_dw_o = (dc_da_o)*(da_dz_o)*(dz_dw_o)
@@ -73,6 +77,7 @@ class Dense:
     a_t0 = A[0]
     z = A[1]
     a = A[2]
+    actv = actv.__name__ if type(actv) is not str else actv # if you declare the model passing the function as arguments, we need this trick
     d_loss_ = getattr(losses, 'd'+loss)
     d_act_ = getattr(activation, 'd'+actv)
 
@@ -99,38 +104,41 @@ class Dense:
       dc_db = dc_dz/y.shape[0]
       return [dc_dz, dc_dw,dc_db]
 
-
-  def summary(self, model):
+  @staticmethod
+  def summary(model):
     print(f'| Total Number of Layers: {len(model)} |')
     for i in range(len(model)):
-      _shape= model[i][0].shape
-      _type = model[i][5]
-      
-      print(f'| layer {i+1}: {_type} with shape {_shape} |')
+      print(f'| layer {i+1}: {model[i][5]} with shape {model[i][0].shape} |')
 
-  def Input(self, neurons, input_shape, activation, reg=None, reg_num=0):
+  @classmethod
+  def Input(cls, neurons, input_shape, activation, reg=None, reg_num=0):
     #random weights and bias between -0.5 to 0.5
     np.random.seed(23)
     weights = np.random.rand(neurons, input_shape) - 0.5
     bias = np.random.rand(neurons, 1) - 0.5
-    return [[weights, bias, activation, Regs(reg), reg_num, Types('Input')]]
+    cls.model = [[weights, bias, activation, Regs(reg), reg_num, Types('Input')]]
+    return cls.model
 
-  def Output(self, pr_neurons, next_neurons, model, activation, reg=None, reg_num=0):
+  @classmethod
+  def Output(cls, pr_neurons, next_neurons, model, activation, reg=None, reg_num=0):
     np.random.seed(23)
     weights = np.random.rand(next_neurons, pr_neurons) - 0.5
     bias = np.random.rand(next_neurons, 1) - 0.5
-    model.append([weights, bias, activation, Regs(reg), reg_num, Types('Output')])
-    return model
+    cls.model.append([weights, bias, activation, Regs(reg), reg_num, Types('Output')])
+    return cls.model
 
-  def Linear(self, pr_neurons, next_neurons, model, activation, reg=None, reg_num=0):
+  @classmethod
+  def Linear(cls, pr_neurons, next_neurons, model, activation, reg=None, reg_num=0):
     np.random.seed(23)
     weights = np.random.rand(next_neurons, pr_neurons) - 0.5
     bias = np.random.rand(next_neurons, 1) - 0.5
-    model.append([weights, bias, activation, reg, reg_num, Types('Linear')])
-    return model
+    cls.model.append([weights, bias, activation, reg, reg_num, Types('Linear')])
+    return cls.model
 
   # TODO: Refactor Dropout. Simply adding to the last model entry is bad
   # because model[i][5] can be RNN or Dropout
+
+  @classmethod
   def Dropout(self, model, p):
     if p < 0 or p > 1:
       raise ValueError("Dropout Probability has to be between 0 and 1, but got {}".format(p))
