@@ -345,8 +345,8 @@ class RNN:
         # weights of layer, bias , weight of cell, hidden time update
         gradients.append([np.zeros_like(model[j][0]), np.zeros_like(model[j][1]) , np.zeros_like(model[j][6]), np.zeros_like(model[j][0])])
 
-      elif model[j][5] = Types.LSTM:
-        gradients.append()
+      #elif model[j][5] = Types.LSTM:
+      #  gradients.append()
       else:
         # weight of layer, bias
         gradients.append([np.zeros_like(model[j][0]), np.zeros_like(model[j][1])])

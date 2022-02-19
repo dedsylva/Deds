@@ -9,6 +9,7 @@ class Types(Enum):
   Linear = 'Linear'
   RNN = 'RNN'
   Dropout = 'Dropout'
+  LSTM = 'LSTM'
 
 @unique
 class Regs(Enum):
