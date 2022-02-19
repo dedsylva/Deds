@@ -15,6 +15,7 @@ class Wheat:
     for i in range(len(df)):
       data[i] = df.loc[i].to_numpy()
 
+
     #replacing possible 0,nans with mean of each feature
     for i in range(data.shape[1]):
       a = data[:,i]
