@@ -293,7 +293,7 @@ class RNN:
         act = getattr(activation, model[j][2])
         _input = x[t].reshape(-1,1) if j == 0 else A[-1][2]
 
-        assert _type in (Types.Linear, Types.Output, Types.RNN, Types.LSTM), f'Incorrect type. Got {_type}, but we only support Linear, RNN, LSTM, Output'
+        assert _type in (Types.Linear, Types.Output, Types.RNN), f'Incorrect type. Got {_type}, but we only support Linear, RNN, LSTM, Output'
 
         if _type == Types.RNN:
           assert act == activation.Tanh, f'Wrong activation layer. RNN uses Tanh, but got {act}'
@@ -306,19 +306,7 @@ class RNN:
 
           rnn = rnn + 1 if rnn + 1 < len(self.rnn_layers) else 0 # go to next RNN layer
 
-        elif _type == Types.LSTM:
-        ## LSTM Forward Return ##
-        # [input, c(t), h(t), i(t), f(t), o(t)] #
-        #TODO: Check if _input is equal to h(t-1) + x(t)
-          c_bar = activataion.Tanh(np.dot(w_c, _input) + b_c)
-          i = activation.Sigmoid(np.dot(w_i, _input) + b_i)
-          f = activation.Sigmoid(np.dot(w_f, _input) + b_f)
-          o = activation.Sigmoid(np.dot(w_o, _input) + b_o)
-          c = np.multiply(c[t-1], f) + np.multiply(i, c_bar)
-          h = h[t-1] + activation.Tanh(np.multiply(c,o))
-
-          A.append([_input, c, h, i, f, o])
-
+        
         else:
           z = np.dot(model[j][0], _input) + model[j][1] 
           A.append([_input, z, act(z)])
@@ -345,8 +333,6 @@ class RNN:
         # weights of layer, bias , weight of cell, hidden time update
         gradients.append([np.zeros_like(model[j][0]), np.zeros_like(model[j][1]) , np.zeros_like(model[j][6]), np.zeros_like(model[j][0])])
 
-      #elif model[j][5] = Types.LSTM:
-      #  gradients.append()
       else:
         # weight of layer, bias
         gradients.append([np.zeros_like(model[j][0]), np.zeros_like(model[j][1])])
@@ -397,47 +383,7 @@ class RNN:
 
           dc_dz_t1 = dc_da
 
-        elif _type == Types.LSTM:
-          ## LSTM Forward Return ##
-          # [input, c(t), h(t), i(t), f(t), o(t)] #
-          W_t1 = model[j+1][0] # weight of next layer
-          inp = A[i][0] + x[t].reshape(-1,1)
-
-          # dc_dw_c
-          dc_da = np.dot(dc_dz_t1.T, model[j+1][0]).T
-          da_dw = np.dot(d_act_(A[i][1]), inp.T) 
-          gradients[j][0] += dc_da*da_dw
-
-          # dc_db_c
-          gradients[j][1] += dc_da * d_act_(A[i][1]) 
-
-          # dc_dw_i
-          dc_da = np.dot(dc_dz_t1.T, model[j+1][0]).T
-          da_dw = np.dot(d_act_(A[i][3]), inp.T) 
-          gradients[j][2] += dc_da*da_dw
-
-          # dc_db_i
-          gradients[j][3] += dc_da * d_act_(A[i][3]) 
-
-          # dc_dw_f
-          dc_da = np.dot(dc_dz_t1.T, model[j+1][0]).T
-          da_dw = np.dot(d_act_(A[i][4]), inp.T) 
-          gradients[j][4] += dc_da*da_dw
-
-          # dc_db_f
-          gradients[j][5] += dc_da * d_act_(A[i][4]) 
-
-          # dc_dw_o
-          dc_da = np.dot(dc_dz_t1.T, model[j+1][0]).T
-          da_dw = np.dot(d_act_(A[i][5]), inp.T) 
-          gradients[j][6] += dc_da*da_dw
-
-          # dc_db_o
-          gradients[j][7] += dc_da * d_act_(A[i][5]) 
-
-
-          dc_dz_t1 = dc_da
-   
+  
         else:
           W_t1 = model[j+1][0] # weight of next layer
 
