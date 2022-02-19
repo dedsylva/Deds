@@ -1,6 +1,6 @@
 # Deds - Deep Learning From Scratch
 
-![](https://img.shields.io/badge/tests-passing-green)
+![Unit Tests](https://github.com/dedsylva/deds/actions/workflows/ci.yml/badge.svg)
 
 ## Objective
 Your simple numpy from scratch deep learning library, created just to keep track of what's happening behind the scenes of TensorFlow. The implementation is similar to Keras. Currently there's only available the Dense format with a few simple functions and the SGD (Stochastic Gradient Descent) optimizer.
